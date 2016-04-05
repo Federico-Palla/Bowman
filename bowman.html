@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Project Bowman</title>
+	<style>canvas{width: 100%; height: 100%}</style>
+</head>
+<body>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/stats.min.js"></script>
+<script src="lib/OBJLoader.js"></script> 
+<script src="lib/dat.gui.min.js"></script>
+<script src="lib/threex.keyboardstate.js"></script> 
+<script type="text/javascript" src="lib/OrbitControls.js"></script>
+<script src="assets/scripts/physics.js"></script>
+<script src="assets/scripts/Utils.js"></script>
+
+<script> 
+	var scene = new THREE.Scene();
+	var mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+	var arrowCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+	var renderer = new THREE.WebGLRenderer({antialias:true});
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.setClearColor(0xffffff, 1);
+	document.body.appendChild(renderer.domElement);
+
+	var mouse = new THREE.Vector2();
+	var keyboard = new THREEx.KeyboardState();
+	var hitted = false;
+
+	
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.top = '0px';
+	document.body.appendChild( stats.domElement );
+
+	var mainActive = true;
+
+	var readyToFire = false;
+
+	mainCamera.position.set(0, 0, 5);
+	var controls = new THREE.OrbitControls( mainCamera, renderer.domElement );
+	controls.enabled = false;
+	arrowCamera.position.set(-2, 1, 0);
+	scene.add(arrowCamera);
+
+
+	var theta = 0; //theta è in gradi
+	var arrowLoader = true;
+	var released = false;
+	var mass = 0.025;
+	var t = 0;
+	var t2 = 0;
+	var ft, rotationGravity, v0;
+
+
+	// WALL
+	var cs = new THREE.BoxGeometry(454,115,0.0001);
+	var cd = new THREE.MeshBasicMaterial({color: 0x660066});
+	var floor = new THREE.Mesh(cs, cd);
+	//scene.add(floor);
+	floor.position.set(227, 57.5, 0);
+
+	// FLOOR
+	//var floorTexture = new THREE.ImageUtils.loadTexture( 'assets/textures/grass2.jpg' );
+	//floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+	//floorTexture.repeat.set( 10, 10 );
+	var floorMaterial = new THREE.MeshBasicMaterial( { color: 0x028D27, side: THREE.DoubleSide } );
+	var floorGeometry = new THREE.CircleGeometry(2000, 200);
+	var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+	floor.position.y = -0.3;
+	floor.rotation.x = Math.PI / 2;
+	scene.add(floor);
+
+
+	// UNDERGROUND
+	var underMaterial = new THREE.MeshBasicMaterial( {color: 0x493000,  side: THREE.BackSide} );
+	var underGeometry = new THREE.SphereGeometry( 900, 200, 200, 0, Math.PI);
+	var underGround = new THREE.Mesh(underGeometry, underMaterial);
+	underGround.position.y = -0.3;
+	//underGround.rotation.x = Math.PI *2;
+	underGround.rotation.x = Math.PI / 2;
+	scene.add(underGround);
+
+	// SKY
+	var skyMaterial = new THREE.MeshBasicMaterial( {color: 0x77FFFC, side: THREE.BackSide } );
+	var skyGeometry = new THREE.SphereGeometry( 900, 200, 200, 0, Math.PI);
+	var sky = new THREE.Mesh(skyGeometry, skyMaterial);
+	sky.position.y = -0.3;
+	sky.rotation.x = -Math.PI / 2;
+	scene.add(sky);
+	
+	var standardMaterial = new THREE.MeshBasicMaterial();
+	var bow = new THREE.Object3D();
+	var loader = new THREE.OBJLoader();
+	loader.load( 'assets/models/Bow.obj', function(object) { 
+		object.material = standardMaterial;
+		bow.add(object);
+		} );
+	bow.position.set(0,1,0);
+	scene.add(bow);
+
+	var arrowContainer = new THREE.Object3D();
+	scene.add(arrowContainer);
+	arrowContainer.position.set(0, 1, 0);
+	arrowContainer.add(mainCamera);
+
+	var archer = new THREE.Object3D();
+			archer.add(bow);
+			archer.add(arrowContainer);
+			scene.add(archer);
+
+	var arrowObj = null;
+	var fakeArrow = null;
+	var arrowBox = new THREE.Box3( new THREE.Vector3(), new THREE.Vector3() );
+	
+	//freccia
+	var loader = new THREE.OBJLoader( );
+	loader.load( 'assets/models/Arrow.obj', function ( object ) {
+		object.traverse(function (child) {
+		    if (child instanceof THREE.Mesh) {
+		    child.material = new THREE.MeshBasicMaterial({color: 0x00ff00});;
+		    }
+		});
+		arrowObj = object;
+		arrowContainer.add(arrowObj);
+		arrowObj.visible = false;
+		//arrowObj.add(arrowCamera);
+		fakeArrow = arrowObj.clone();
+		fakeArrow.traverse(function (child) {
+		    if (child instanceof THREE.Mesh) {
+		    child.material = new THREE.MeshBasicMaterial({color: 0xff0000});;
+		    }
+		});
+		fakeArrow.visible = true;
+		bow.add(fakeArrow);
+	
+		arrowCamera.lookAt(arrowContainer.position);
+	} );
+
+
+	// TARGET
+	// Archery target bounds
+	var MAX_LENGTH = 500;
+	var MIN_LENGTH = 150;
+	// Loading
+	var target = new THREE.Object3D();
+	loader.load('assets/models/Target.obj', function (object ) {
+
+		object.traverse(function (child) {
+		    if (child instanceof THREE.Mesh) {
+		    child.material = new THREE.MeshBasicMaterial({color: 0x0000ff});
+		    }
+		});
+
+		target.add(object);
+		});
+	// Positioning in scene
+	target.rotation.y = 90 * Math.PI / 180;
+	//target.position.x = Math.round(Math.random() * (MAX_LENGTH - MIN_LENGTH) + MIN_LENGTH); // target is placed randomly	
+	scene.add(target);
+
+	// TARGET COLLISION BOX
+	var targetBox = new THREE.Box3( new THREE.Vector3(), new THREE.Vector3() );
+	 						// posizionato presso il target
+
+
+
+	function onMouseMove( event ) {
+		
+		if(!released && mainActive){
+		    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+		    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;	
+
+		    theta = getAngle(0, 0, mouse.x, mouse.y);
+		    if(mouse.y <0){
+			theta = -theta;
+		    }
+		    if(arrowObj && bow){
+			arrowObj.rotation.z = theta * 0.0174533;
+			bow.rotation.z = theta * 0.0174533
+		    }
+		    v0 = computeVelInit(mass, effectController.lb, effectController.tension);
+		    ft = flightTime(v0, theta);
+		    rotationGravity = 2*theta*0.0174533 * 0.016666666667 / ft;
+		}
+
+	}
+	
+	
+	
+	// DAT GUI CREATION
+	var gui = new dat.GUI( { height: 4 * 32 - 1 } );
+	var effectController = { tension: 0.2, lb: 50, shoot: function() { readyToFire = true; 
+		fakeArrow.traverse(function (child) {
+		    if (child instanceof THREE.Mesh) {
+		    child.material  =  new THREE.MeshBasicMaterial({color: 0x00ff00});
+		    }
+		}) }, target: 100 };
+	gui.add(effectController, 'tension', 0.2, 0.6).name('Allungo').step(0.1);
+	gui.add(effectController, 'lb', 20, 70).name('Libraggio arco').step(5);
+	gui.add(effectController, 'target', 30, 500).step(10).name('Target');
+	gui.add(effectController, 'shoot').name('Pronto al tiro');
+ 
+
+
+	
+	var y0, x0, x, y;
+	var cy0, cx0, cx, cy;
+	
+	var count = 0;
+	
+
+	function onDocumentMouseDown(event){
+	    if (readyToFire) {
+		released = true;
+		controls.enabled = true;
+	    }
+	}
+		
+
+	window.addEventListener( 'mousemove', onMouseMove, false );
+	window.addEventListener( 'mousedown', onDocumentMouseDown, false );
+
+	function render(){
+		requestAnimationFrame(render);
+		
+		stats.update();
+
+		target.position.x = effectController.target;  // target posizionato dall'utente
+		var percenTns = effectController.tension * 100 / 0.6;
+		if(fakeArrow){
+			fakeArrow.position.x = -( percenTns / 100);
+		}
+		
+
+		if(keyboard.pressed("1") && released){
+			mainActive = false;
+		}
+		if(keyboard.pressed("2")){
+			mainActive = true;
+		}
+	
+		if(mainActive){
+			renderer.render(scene, mainCamera);
+		} else {
+			renderer.render(scene, arrowCamera);
+		}
+		
+
+		//tempo = 1/60 secondi = 0.016666666667
+		if(arrowObj && arrowLoader){
+			y0=arrowContainer.position.y;
+			x0=arrowContainer.position.x;
+			cy0=arrowCamera.position.y;
+			cx0=arrowCamera.position.x;
+
+			y = y0;
+			x = x0;
+			cy = cy0;
+			cx = cx0;
+			arrowLoader = false;		
+		}
+
+		if(arrowObj && released){
+			controls.update();
+			arrowObj.visible = true;
+			fakeArrow.visible = false;
+		    if( y>=0 && !hitted){
+			arrowBox.setFromObject(arrowObj);
+			targetBox.setFromObject(target);
+			if(!arrowBox.isIntersectionBox(targetBox)){
+
+			    x = computeXShot(x0, theta, v0, t);
+			    y = computeYShot(y0, theta, v0, t);
+			    t+=0.01667;
+			    arrowObj.rotation.z -= rotationGravity;
+
+			    arrowContainer.position.set(x, y, arrowContainer.position.z);
+
+			    if(count >= 60){
+				cx = computeXShot(cx0, theta, v0, t2);
+				cy = computeYShot(cy0, theta, v0, t2);
+				t2+=0.01667;
+
+				arrowCamera.position.set(cx, cy, arrowContainer.position.z);
+				sky.position.x = arrowContainer.position.x;
+				underGround.position.x = arrowContainer.position.x;
+			    }
+			} else {
+				x = computeXShot(x0, theta, v0, t);
+			    	y = computeYShot(y0, theta, v0, t);
+			    	t+=0.01667; 
+				arrowContainer.position.set(x, y, arrowContainer.position.z);
+				hitted = true;
+			}
+			}
+
+		}
+		count++;
+	}
+
+	render();
+</script>
+
+</body>
+</html>
