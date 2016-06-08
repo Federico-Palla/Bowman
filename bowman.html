@@ -91,6 +91,7 @@
 				var arrowCount = 3;
 				var empty = true;
 				var releaseCam = false;
+				
 				//uniforms
 				var uniforms_normal, uniforms_brick, prat_uniforms, arrow_uniforms, bow_uniforms, uniforms_cart;
 
@@ -145,7 +146,7 @@
 
 				gui.add(effectController, 'tension', 0.2, 0.6).name('Allungo').step(0.1);
 				gui.add(effectController, 'lb', 20, 70).name('Libraggio arco').step(5);
-				gui.add(effectController, 'target', 10, 100).step(10).name('Target');
+				gui.add(effectController, 'target', 10, 100).step(10).name('Distanza Target').listen();
 
 				function loadNPC(){
 					var loader = new THREE.ColladaLoader();
@@ -241,6 +242,7 @@
 					sceneActive = false;
 					slained = false;
 					trigger = true;
+					
 
 					//INIZIALIZZAZIONE DELLE VARIABILI USATE NEI CALCOLI DELLA FISICA DEL PROIETTILE
 
@@ -710,7 +712,7 @@
 				}	
 				
 				function onDocumentMouseDown(event){
-				    if (readyToFire) {
+				    if (readyToFire && !slained) {
 					released = true;
 					controls.enabled = true;
 				    }
@@ -759,6 +761,7 @@
 						if(target && monster_death && !hitted && target.position.x > 1){
 							target.position.x = target.position.x - 0.05;
 							monster_death.position.x = target.position.x;
+							effectController.target = target.position.x;
 						}
 						
 
@@ -774,31 +777,51 @@
 							fakeArrow.position.x = -( percenTns / 100);
 						}
 						
-
-						if(keyboard.pressed("1") && released){
-							mainActive = false;
-							sceneActive = false;
-							releaseCam = true;
-						}
-						if(keyboard.pressed("2")){
-							mainActive = true;3
-							sceneActive = false;
-							releaseCam = true;
-						}
-						if(keyboard.pressed("3")){
-							mainActive = false;
-							sceneActive = true;
-							releaseCam = true;
-						}
-						if(keyboard.pressed("4")&&hitted){
-							mainActive = false;
-							sceneActive = false;
-							releaseCam = false;
+						if(!hitted){
+							if(keyboard.pressed("1") && released){
+								mainActive = false;
+								sceneActive = false;
+								
+							}
+							if(keyboard.pressed("2")){
+								mainActive = true;3
+								sceneActive = false;
+								
+							}
+							if(keyboard.pressed("3")){
+								mainActive = false;
+								sceneActive = true;
+								
+							}
+								
+							}
+						else{
+							if(keyboard.pressed("1") && released){
+								mainActive = false;
+								sceneActive = false;
+								releaseCam = true;
+							}
+							if(keyboard.pressed("2")){
+								mainActive = true;3
+								sceneActive = false;
+								releaseCam = true;
+							}
+							if(keyboard.pressed("3")){
+								mainActive = false;
+								sceneActive = true;
+								releaseCam = true;
+							}
+							if(keyboard.pressed("4")){
+								mainActive = false;
+								sceneActive = false;
+								releaseCam = false;
+							}
 						}
 
 						if(keyboard.pressed("space") && timeOut == 0 && !slained){
 							timeOut = 30;
 							readyToFire = !readyToFire; 
+							
 							
 
 							if(readyToFire){
@@ -842,6 +865,8 @@
 
 						if(keyboard.pressed("E") && resetter){
 							arrowCount--;
+							slained = false;
+
 							if(arrowCount>0){
 								empty = true;
 								init();
@@ -901,10 +926,16 @@
 							cx = cx0;
 							arrowLoader = false;		
 						}
+
+						if(target){
+							console.log(slained);
+						}
+
 						if(target &&target.position.x < 1.05 && !slained){
 							document.getElementById("scores").innerHTML += "<br>You have been slained!";
-							document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
-							resetter = true;
+							document.getElementById("scores").innerHTML += "<br>GAME OVER";
+							document.getElementById("scores").innerHTML += "<br>Refresh the page to play more";
+							resetter = false;
 							slained = true;
 						}
 
@@ -965,6 +996,7 @@
 									arrowContainer.position.set(x, y, arrowContainer.position.z);
 									arrowObj.visible = false;
 									arrowContainer.visible = false;
+									effectController.target = 100;
 									hitted = true;
 									if(monster_death && target){
 
