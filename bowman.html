@@ -53,6 +53,20 @@
 			<script src="assets/scripts/physics.js"></script>
 			<script src="assets/scripts/Utils.js"></script>
 
+			<script src="assets/shaders/lambertianShader.js"></script>
+			<script src="assets/shaders/microFacetShader.js"></script>
+			<script src="assets/shaders/groundShader.js"></script>
+			<script src="assets/shaders/killCamShader.js"></script>
+
+			<script src="lib/Animation.js"></script>
+			<script src="lib/AnimationHandler.js"></script>
+			<script src="lib/KeyFrameAnimation.js"></script>
+			<script src="lib/ColladaLoader.js"></script>
+			<script src="lib/EffectComposer.js"></script>
+			<script src="lib/CopyShader.js"></script>
+			<script src="lib/ShaderPass.js"></script>
+			<script src="lib/RenderPass.js"></script>
+			<script src="lib/MaskPass.js"></script>
 
 			<script>
 
@@ -67,15 +81,42 @@
 				var ft, rotationGravity, v0, theta, mass, t, t2;
 				var floor, floorMaterial, floorGeometry;
 				var underGround, underMaterial, underGeometry;
-				var sky, skyMaterial, skyGeometry;
+				//var sky, skyMaterial, skyGeometry;
 				var standardMaterial, bow, loader, arrowContainer, arrowObj, arrowBox, fakeArrow, archer, target, targetBox;
 				var arrowObj = null;
 				var fakeArrow = null;
 				var introOver;
 				var count, timeOut;
 				var scoredPoints = 0;
+				var arrowCount = 3;
+				var empty = true;
+				//uniforms
+				var uniforms_normal, uniforms_brick, prat_uniforms, arrow_uniforms, bow_uniforms, uniforms_cart;
+
+				var arrArrow;
 
 				var pivot;
+
+				var monster_alive, monster_death, deathAnimation;
+				var trigger = true;
+				//var alive = true;
+
+				var keyboard = new THREEx.KeyboardState();
+				var pressOnce = 0;
+				var clock = new THREE.Clock();
+				var composer, killCam;
+				var color = Math.PI/2;
+
+				//LUCI
+
+				var lightPower = new THREE.Vector3(50.0, 50.0, 50.0);
+				var lightPowerRed = new THREE.Vector3(3500.0, 3500.0, 3500.0);
+				var lightPowerGreen = new THREE.Vector3(3500.0, 3500.0, 3500.0);
+
+				var redLight = new THREE.Vector3(1.0, 0.0, 0.0);
+				var greenLight = new THREE.Vector3(0.0, 1.0, 0.0);
+				
+				var NO_POWER = new THREE.Vector3(0.0, 0.0, 0.0);
 
 				//INIZIALIZZAZIONE DEL RENDERER, DEGLI STATS E DELLA DAT.GUI
 
@@ -102,26 +143,88 @@
 
 				gui.add(effectController, 'tension', 0.2, 0.6).name('Allungo').step(0.1);
 				gui.add(effectController, 'lb', 20, 70).name('Libraggio arco').step(5);
-				gui.add(effectController, 'target', 10, 500).step(10).name('Target');
+				gui.add(effectController, 'target', 10, 100).step(10).name('Target');
+
+				function loadNPC(){
+					var loader = new THREE.ColladaLoader();
+								loader.options.convertUpAxis = true;
+								loader.load( 'assets/animations/monster.dae', function ( collada ) {
+
+									monster_alive = collada.scene;	
+									monster_alive.traverse( function ( child ) {
+
+										if ( child instanceof THREE.SkinnedMesh ) {						
+											child.material.map = THREE.ImageUtils.loadTexture( "assets/textures/monster.jpg" );
+											var animation = new THREE.Animation( child, child.geometry.animation );
+											animation.play();
+										}
+									} );
+
+									monster_alive.scale.x = monster_alive.scale.y = monster_alive.scale.z = 0.002;
+									monster_alive.updateMatrix();
+									monster_alive.rotation.y = Math.PI;
+									monster_alive.position.x = effectController.target;
+									target = monster_alive;
+									scene.add(monster_alive);
+							
+								} );
+
+								// MOSTRO MORTO
+								var loader2 =  new THREE.ColladaLoader();
+								loader2.options.convertUpAxis = true;
+								loader2.load( 'assets/animations/monsterdeath.dae', function ( collada ) {
+
+									monster_death = collada.scene;
+
+									monster_death.traverse( function ( child ) {
+
+										if ( child instanceof THREE.SkinnedMesh ) {						
+
+											child.material.map = THREE.ImageUtils.loadTexture( "assets/textures/monster.jpg" );
+											deathAnimation = new THREE.Animation( child, child.geometry.animation );
+											deathAnimation.loop = false;						
+
+										}
+									} );
+
+					monster_death.scale.x = monster_death.scale.y = monster_death.scale.z = 0.002;
+					monster_death.updateMatrix();
+					monster_death.visible = false;
+					scene.add(monster_death);			
+
+				} );
+			}
+
+
+				
+
+				//console.log(vivo);
+				
 
 				document.body.appendChild(gui.domElement);
 				//FUNZIONE INIT CHE DA IL VIA ALLA CREAZIONE DI UNA NUOVA SCENA
 
 				function init(){
 
+					loadNPC();
+
 					scene = new THREE.Scene();
-					mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-					arrowCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-					targetCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+					mainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 15000);
+					arrowCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 15000);
+					targetCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 15000);
+					mobCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 15000);
 					targetCamera.position.x = 1;
 					targetCamera.position.y = 3;
 					targetCamera.position.z = 3;
-				   sceneCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 3000);
+				   	sceneCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 15000);
 
 
 					controls = new THREE.OrbitControls( mainCamera, renderer.domElement );
 					controls.enabled = false;
 					sceneControls = new THREE.OrbitControls( sceneCamera, renderer.domElement );
+
+
+					
 
 					mouse = new THREE.Vector2();
 					keyboard = new THREEx.KeyboardState();
@@ -134,6 +237,7 @@
 					introOver = false;				// animazione introduttiva da eseguire
 					resetter= false;
 					sceneActive = false;
+					slained = false;
 
 					//INIZIALIZZAZIONE DELLE VARIABILI USATE NEI CALCOLI DELLA FISICA DEL PROIETTILE
 
@@ -145,30 +249,229 @@
 					count = 0;						//contatore ausiliario
 					timeOut = 0;
 					
-					mainCamera.position.set(0, 0, 5);
+					mainCamera.position.set(0, 0, 6);
 					arrowCamera.position.set(-2, 1.3, 0);
+
 					scene.add(arrowCamera);
 
+					/*var light = new THREE.AmbientLight( 0x404040 ); // soft white light
+					scene.add( light );*/
+
+					var light = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xffff00, wireframe:true}));
+					light.position.set( 0.0, 500.0, 0.0 );
+					scene.add( light );
+
+					var light2 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xff0000, wireframe:true}));
+					light2.position.set( -4.0, 4.0, -4.0 );
+					scene.add( light2 );
+					
+					var light3 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0x00ff00, wireframe:true}));
+					light3.position.set( -4.0, 3.0, -4.0 );
+					scene.add( light3 );
+
+					composer = new THREE.EffectComposer( renderer );
+					composer.addPass( new THREE.RenderPass( scene, mainCamera ) );
+
+					killCam = new THREE.ShaderPass( killShader );
+					composer.addPass( killCam );
+
+											var effect = new THREE.ShaderPass( THREE.CopyShader);
+											effect.renderToScreen = true;
+											composer.addPass( effect );
+											//killCam.enabled = false;
+
+
+
+					//sun
+					/*var pointLight1 = new THREE.PointLight(0xffffff, 1, 0);
+					pointLight1.position.set(0, 1000, 0);
+					scene.add(pointLight1);*/
+
 					// FLOOR
+
+					var diffuse_grass = THREE.ImageUtils.loadTexture( "assets/textures/grass_diffuse.png" );
+					var normal_grass = THREE.ImageUtils.loadTexture( "assets/textures/grass_norm.png" );
+					var displacement_grass = THREE.ImageUtils.loadTexture( "assets/textures/grass_displ.jpg" );
+					var displacementScale = 0.5;
+
+					diffuse_grass.minFilter = THREE.LinearMipMapLinearFilter; 
+					diffuse_grass.anisotropy = renderer.getMaxAnisotropy();
+					normal_grass.minFilter = THREE.LinearMipMapLinearFilter; 
+					normal_grass.anisotropy = renderer.getMaxAnisotropy();
+
+					var ground_geometry = new THREE.PlaneBufferGeometry(4, 4, 96, 96);
+
+					uniforms_normal = {
+						diffuseMap: {type: "t", value: diffuse_grass},
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+
+						lightPower:	{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+
+						normalMap: {type: "t", value: normal_grass },
+						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+						displacementMap: {type: "v2", value: displacement_grass},
+						displacementScale: {type: "f", value: displacementScale},
+						times: {type: "f", value: 1.0},
+						
+						lightColor2: {type: "v3", value: redLight},
+						lightColor3: {type: "v3", value: greenLight},
+					};
+
+
+					var grass_material = new THREE.ShaderMaterial({ uniforms: uniforms_normal, vertexShader: groundShader.vertexShader, fragmentShader: groundShader.fragmentShader });
+					//grass_material.side = THREE.DoubleSide;
+
+					var cube = new THREE.Mesh( ground_geometry, grass_material );
+					cube.rotation.x = -90 * Math.PI / 180;
+					scene.add( cube );
+
+					for(var i = 0; i < 28; i++){
+						var cubo = cube.clone();
+						cubo.position.x = 3.99 * i;
+						scene.add(cubo);
+					}
+
+					var diffuse_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_diffuse.png" );
+					var normal_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_normal.png" );
+					var displacement_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_displ.png" );
+
+					uniforms_brick = {
+						diffuseMap: {type: "t", value: diffuse_floor},
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+
+						lightPower:	{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+						normalMap: {type: "t", value: normal_floor },
+						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+						displacementMap: {type: "v2", value: displacement_floor},
+						displacementScale: {type: "f", value: 0.1},
+						times: {type: "f", value: 1.0},
+						
+						lightColor2: {type: "v3", value: redLight},
+						lightColor3: {type: "v3", value: greenLight},
+					};
+
+
+					var floor_material = new THREE.ShaderMaterial({ uniforms: uniforms_brick, vertexShader: groundShader.vertexShader, fragmentShader: groundShader.fragmentShader });
+
+					var floor = new THREE.Mesh( ground_geometry, floor_material );
+					floor.rotation.x = -90 * Math.PI / 180;
+					floor.position.x = -4.0;
+					scene.add( floor );
+					var floor2 = floor.clone();
+					floor2.position.z = -4.0;
+					var floor3 = floor.clone();
+					floor3.position.z = 4.0;
+					scene.add( floor2 );
+					scene.add( floor3 );
+
+					var floor4 = floor2.clone();
+					floor4.position.x = 0.0;
+					var floor5 = floor3.clone();
+					floor5.position.x = 0.0;
+					scene.add( floor4 );
+					scene.add( floor5 );
+
+					var floor6 = floor2.clone();
+					floor6.position.x = 4.0;
+					var floor7 = floor3.clone();
+					floor7.position.x = 4.0;
+					scene.add( floor6 );
+					scene.add( floor7 );
+
+					var floor8 = floor2.clone();
+					floor8.position.x = 8.0;
+					var floor9 = floor3.clone();
+					floor9.position.x = 8.0;
+					scene.add( floor8 );
+					scene.add( floor9 );
+
+
+
+					var prato_geometry = new THREE.PlaneBufferGeometry(500, 500);
+
+					prat_uniforms = {
+						diffuseMap: {type: "t", value: diffuse_grass},
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+
+						lightPower:	{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+						normalMap: {type: "t", value: normal_grass },
+						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+						
+						lightColor2: {type: "v3", value: redLight},
+						times: {type: "f", value: 120.0},
+						lightColor3: {type: "v3", value: greenLight},
+					}
+
+					prat_uniforms.diffuseMap.value.wrapS = prat_uniforms.diffuseMap.value.wrapT = THREE.RepeatWrapping;
+					prat_uniforms.normalMap.value.wrapS = prat_uniforms.normalMap.value.wrapT = THREE.RepeatWrapping;
+
+					//var vs = document.getElementById("vertex").textContent;
+					//var fs = document.getElementById("fragment").textContent;
+
+					var prato_mat = new THREE.ShaderMaterial({uniforms: prat_uniforms, vertexShader: groundShader.vertexShader, fragmentShader: groundShader.fragmentShader});
+					var prato = new THREE.Mesh(prato_geometry, prato_mat);
+					prato.rotation.x = -90 * Math.PI / 180;
+					scene.add(prato);
+
+					/*
 					floorMaterial = new THREE.MeshBasicMaterial( { color: 0x028D27, side: THREE.DoubleSide } );
 					floorGeometry = new THREE.CircleGeometry(2000, 200);
 					floor = new THREE.Mesh(floorGeometry, floorMaterial);
 					floor.rotation.x = Math.PI / 2;
 					scene.add(floor);	
+					*/
 
 					// UNDERGROUND
 					underMaterial = new THREE.MeshBasicMaterial( {color: 0x493000,  side: THREE.BackSide} );
-					underGeometry = new THREE.SphereGeometry( 900, 200, 200, 0, Math.PI);
+					underGeometry = new THREE.SphereGeometry( 250, 200, 200, 0, Math.PI);
 					underGround = new THREE.Mesh(underGeometry, underMaterial);
 					underGround.rotation.x = Math.PI / 2;
 					scene.add(underGround);
 
 					// SKY
-					skyMaterial = new THREE.MeshBasicMaterial( {color: 0x77FFFC, side: THREE.BackSide } );
+					/*skyMaterial = new THREE.MeshLambertMaterial( {color: 0x77FFFC, side: THREE.BackSide } );
 					skyGeometry = new THREE.SphereGeometry( 900, 200, 200, 0, Math.PI);
 					sky = new THREE.Mesh(skyGeometry, skyMaterial);
 					sky.rotation.x = -Math.PI / 2;
-					scene.add(sky);
+					scene.add(sky);*/
+					var path = "assets/textures/TropicalSunnyDay/";
+					var format = ".png";
+
+					var urls = [
+							path + "px" + format, path + "nx" + format,
+							path + "py" + format, path + "ny" + format,
+							path + "pz" + format, path + "nz" + format
+						];
+
+					var textureCube = new THREE.ImageUtils.loadTextureCube( urls );
+
+					//Skybox
+					var shader = THREE.ShaderLib[ "cube" ];
+						shader.uniforms[ "tCube" ].value = textureCube;
+
+						var materiale = new THREE.ShaderMaterial( {
+
+							fragmentShader: shader.fragmentShader,
+							vertexShader: shader.vertexShader,
+							uniforms: shader.uniforms,
+							side: THREE.BackSide
+
+						} ),
+
+					mesh = new THREE.Mesh( new THREE.BoxGeometry( 10000, 10000, 10000 ), materiale );
+					scene.add( mesh );
 
 					arrowObj = null;
 					fakeArrow = null;
@@ -176,12 +479,43 @@
 					document.getElementById("scores").innerHTML = "score: " + scoredPoints.toString(); //+ scoredPoints
 
 					//LOADING BOW MESH
-					standardMaterial = new THREE.MeshBasicMaterial();
+					var diff_bow = THREE.ImageUtils.loadTexture("assets/textures/bow_diff.png");
+			//var spec_bow = THREE.ImageUtils.loadTexture("Textures/empty_spec.png");
+					var norm_bow = THREE.ImageUtils.loadTexture("assets/textures/bow_norm.png");
+
+			
+
+					bow_uniforms = {
+						diffuseMap:	{ type: "t", value: diff_bow},
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+
+						lightPower:	{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+						normalMap: { type: "t", value: norm_bow },
+						normalScale: { type: "v2", value: new THREE.Vector2(1,1) },
+						//esperimento aggiungendo colore alle luci
+						
+						lightColor2: {type: "v3", value: redLight},
+						lightColor3: {type: "v3", value: greenLight},
+					};
+
+				var bow_mat = generateMaterialL( bow_uniforms, diff_bow, norm_bow);
+
 					bow = new THREE.Object3D();
 					loader = new THREE.OBJLoader();
 					loader.load( 'assets/models/Bow.obj', function(object) { 
-						object.material = standardMaterial;
+						object.traverse(function (child) {
+						    if (child instanceof THREE.Mesh) {
+						    child.material = bow_mat;
+						    child.rotation.y = 90 * Math.PI/180;
+						    }
+						});
 						bow.add(object);
+
+						bow.visible = true;
 						} );
 					bow.position.set(0,1.3,0);
 					scene.add(bow);
@@ -202,11 +536,47 @@
 					arrowBox = new THREE.Box3( new THREE.Vector3(), new THREE.Vector3() );
 					
 					//LOADING ARROW MESH
+
+					
+
+					var arrow_diffuse = THREE.ImageUtils.loadTexture( "assets/textures/diffuse.png");
+					var arrow_specular = THREE.ImageUtils.loadTexture( "assets/textures/specular.png" );
+					var arrow_normal = THREE.ImageUtils.loadTexture( "assets/textures/normal.png" );
+
+					//setting uniforms for arrow
+					arrow_uniforms = {
+						specularMap: { type: "t", value: arrow_specular},
+						diffuseMap:	{ type: "t", value: arrow_diffuse},
+						ambient:	{ type: "v3", value: new THREE.Vector3() },
+						m: {type: "f", value: 0},
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+
+						lightPower:	{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+						alpha: {type: "f", value: 0},
+						s: {type: "f", value: 0},
+						normalMap: { type: "t", value: arrow_normal },
+						normalScale: { type: "v2", value: new THREE.Vector2(1,1) },
+						lightColor2: {type: "v3", value: redLight},
+						lightColor3: {type: "v3", value: greenLight},
+					};
+
+					
+					arrow_uniforms.ambient.value = (new THREE.Vector3( 0.1,0.1,0.1 ));
+					arrow_uniforms.alpha.value = 0.1;
+					arrow_uniforms.s.value = 0.3;
+
+					var arrow_material = generateMaterialMF( arrow_uniforms, arrow_diffuse, arrow_specular, arrow_normal);
+
+
 					loader = new THREE.OBJLoader( );
 					loader.load( 'assets/models/Arrow.obj', function ( object ) {
 						object.traverse(function (child) {
 						    if (child instanceof THREE.Mesh) {
-						    child.material = new THREE.MeshBasicMaterial({color: 0x00ff00});;
+						    child.material = arrow_material;
 						    }
 						});
 						arrowObj = object;
@@ -215,7 +585,7 @@
 						fakeArrow = arrowObj.clone();
 						fakeArrow.traverse(function (child) {
 						    if (child instanceof THREE.Mesh) {
-						    child.material = new THREE.MeshBasicMaterial({color: 0xff0000});;
+						    child.material = arrow_material;
 						    }
 						});
 						fakeArrow.visible = true;
@@ -225,6 +595,8 @@
 					} );
 
 					//LOADING TARGET MESH
+					//work in progress
+					/*
 					target = new THREE.Object3D();
 					loader.load('assets/models/Target.obj', function (object ) {
 
@@ -235,13 +607,55 @@
 						});
 
 						target.add(object);
-						});
+						});*/
 
-					target.rotation.y = 90 * Math.PI / 180;	
-					scene.add(target);
+					//loading semaforo
+					
+
+					//target.rotation.y = 90 * Math.PI / 180;	
+					//scene.add(target);
 
 					// TARGET COLLISION BOX
 					targetBox = new THREE.Box3( new THREE.Vector3(), new THREE.Vector3() );
+
+					//LOADING CART MESH
+
+					var cart_diff = THREE.ImageUtils.loadTexture( "assets/textures/cart_diff.png" );
+					var cart_norm = THREE.ImageUtils.loadTexture( "assets/textures/cart_norm.png" );
+					var loader = new THREE.OBJLoader( );
+
+					uniforms_cart = {
+							diffuseMap: {type: "t", value: cart_diff},
+							normalMap: {type: "t", value: cart_norm },
+							LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+							LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+							LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+
+							lightPower:	{ type: "v3", value: lightPower },
+							lightPower2:	{ type: "v3", value: lightPowerRed },
+							lightPower3:	{ type: "v3", value: NO_POWER },
+							normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+					};
+
+
+
+					var cart_mat = generateMaterialL(uniforms_cart, cart_diff, cart_norm);
+					
+					loader.load( 'assets/models/Cart.obj', function ( object ) {
+						object.traverse(function (child) {
+						    if (child instanceof THREE.Mesh) {
+							    child.material = cart_mat;
+						    }
+						});
+						//object.rotation.x = 90 * Math.PI/180;
+						object.scale.set(0.02, 0.02, 0.02);
+						//object.position.set(2.0, -0.5, -2.5);
+						object.position.set(-4.0, -0.5, 2.0);
+						object.rotation.y = 90 * Math.PI / 180;
+						scene.add(object);
+					} );
+
+					//postprocessing greyscale on missed target
 
 					pivot = new THREE.Object3D();
 					scene.add(pivot);
@@ -292,27 +706,47 @@
 					requestAnimationFrame(render);
 					
 					stats.update();
+					//creazione faretra
+					if(fakeArrow && empty){
+						for(var i = 0; i < arrowCount-1; i++){
+							var spareArrow = fakeArrow.clone();
+							
+							spareArrow.position.set(-4.35, 0.5, 2.0 + i*0.2);
+							spareArrow.rotation.z = -50 * Math.PI / 180;
+
+							scene.add(spareArrow);
+						}
+						empty = false;
+					}
 
 					// RENDERIZZA ANIMAZIONE INIZIALE
-					if (!introOver) {
+
+					if (!introOver && target) {
 						target.position.x = effectController.target;
 						targetCamera.lookAt(arrowContainer.position);
 
-						if(targetCamera.position.x <= target.position.x + 50)
-							targetCamera.position.x += 1;
+
+						if(targetCamera.position.x <= target.position.x + 20)
+							targetCamera.position.x += 1.5;
 						else
 							introOver = true;
 
 						renderer.render(scene, targetCamera);
 
 					} 
+
 					// RENDERIZZA IL GIOCO
 					else {
+						if(target && monster_death && !hitted && target.position.x > 1){
+							target.position.x = target.position.x - 0.05;
+							monster_death.position.x = target.position.x;
+						}
+						
 
 						sceneControls.update();
 
-						if(!readyToFire){
-							target.position.x = effectController.target;  // target posizionato dall'utente
+						if(!readyToFire && target){
+							//target.position.x = effectController.target;  // target posizionato dall'utente
 							pivot.position.x = effectController.target / 2;
 						}
 
@@ -335,29 +769,100 @@
 							sceneActive = true;
 						}
 
-						if(keyboard.pressed("space") && timeOut == 0){
+						if(keyboard.pressed("space") && timeOut == 0 && !slained){
 							timeOut = 30;
 							readyToFire = !readyToFire; 
-							fakeArrow.traverse(function (child) {
+							
+
+							if(readyToFire){
+								
+								uniforms_normal.lightPower3.value = lightPowerGreen;
+								uniforms_brick.lightPower3.value = lightPowerGreen;
+								prat_uniforms.lightPower3.value = lightPowerGreen;
+								arrow_uniforms.lightPower3.value = lightPowerGreen;
+								bow_uniforms.lightPower3.value = lightPowerGreen;
+								uniforms_cart.lightPower3.value = lightPowerGreen;
+
+								uniforms_normal.lightPower2.value = NO_POWER;
+								uniforms_brick.lightPower2.value = NO_POWER;
+								prat_uniforms.lightPower2.value = NO_POWER;
+								arrow_uniforms.lightPower2.value = NO_POWER;
+								bow_uniforms.lightPower2.value = NO_POWER;
+								uniforms_cart.lightPower2.value = NO_POWER;
+							} else {
+								uniforms_normal.lightPower2.value = lightPowerRed;
+								uniforms_brick.lightPower2.value = lightPowerRed;
+								prat_uniforms.lightPower2.value = lightPowerRed;
+								arrow_uniforms.lightPower2.value = lightPowerRed;
+								bow_uniforms.lightPower2.value = lightPowerRed;
+								uniforms_cart.lightPower2.value = lightPowerRed;
+
+								uniforms_normal.lightPower3.value = NO_POWER;
+								uniforms_brick.lightPower3.value = NO_POWER;
+								prat_uniforms.lightPower3.value = NO_POWER;
+								arrow_uniforms.lightPower3.value = NO_POWER;
+								bow_uniforms.lightPower3.value = NO_POWER;
+								uniforms_cart.lightPower3.value = NO_POWER;
+								
+							}
+
+							/*fakeArrow.traverse(function (child) {
 							   if (child instanceof THREE.Mesh) {
 							     	child.material  =  readyToFire ? new THREE.MeshBasicMaterial({color: 0x00ff00}) : new THREE.MeshBasicMaterial({color: 0xff0000});
 							   }
-							}) 
+							}) */
 						}
 
 						if(keyboard.pressed("E") && resetter){
-							init();
+							arrowCount--;
+							if(arrowCount>0){
+								empty = true;
+								init();
+							}else {
+								document.getElementById("scores").innerHTML += "<br>GAME OVER";
+								
+								resetter = false;
+							}
+							
 						}
 
-					
-						if(mainActive){
+						if(hitted && monster_death && arrowContainer){
+							if(killCam.enabled){
+								arrowContainer.remove(mainCamera);
+								mainCamera.position.set(arrowContainer.position.x, 5, 5);
+								mainCamera.lookAt(monster_death.position);
+												if(killCam.uniforms.amount.value < 1.0 ){
+													killCam.uniforms.amount.value += 0.01;
+												} else {
+													if(killCam.uniforms.index.value < 1.0 ){
+														killCam.uniforms.index.value += 0.01;
+													} else {
+														color += 0.01;
+														killCam.uniforms.color.value.y=0.0;
+														killCam.uniforms.color.value.z=0.0;
+														killCam.uniforms.color.value.x = Math.abs( Math.sin(color) )+ 0.35;
+														if(killCam.uniforms.color.value.x > 0.7){
+															killCam.uniforms.color.value.x = 0.7; //ecco
+														}
+													}
+												}
+
+											}
+											killCam.uniforms.time.value = (killCam.uniforms.time.value + 0.2) % 10;
+							composer.render();
+						}else{
+							if(mainActive){
 							renderer.render(scene, mainCamera);
 						} else {
 							sceneActive ? renderer.render(scene, sceneCamera) : renderer.render(scene, arrowCamera);
 						}
+						}					
+						
+
 						
 						//tempo = 1/60 secondi = 0.016666666667
-						if(arrowObj && arrowLoader){
+						if(arrowObj && arrowLoader ){
+							
 							y0=arrowContainer.position.y;
 							x0=arrowContainer.position.x;
 							cy0=arrowCamera.position.y;
@@ -368,6 +873,12 @@
 							cy = cy0;
 							cx = cx0;
 							arrowLoader = false;		
+						}
+						if(target &&target.position.x < 1.05 && !slained){
+							document.getElementById("scores").innerHTML += "<br>You have been slained!";
+							document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
+							resetter = true;
+							slained = true;
 						}
 
 						if(arrowObj && released){
@@ -380,6 +891,7 @@
 
 								arrowBox.setFromObject(arrowObj);
 								targetBox.setFromObject(target);
+
 
 								if(!arrowBox.isIntersectionBox(targetBox)){
 
@@ -396,11 +908,23 @@
 										t2+=0.01667;
 
 										arrowCamera.position.set(cx, cy, arrowContainer.position.z);
-										sky.position.x = arrowContainer.position.x;
-										underGround.position.x = arrowContainer.position.x;
+										
+
+										//underGround.position.x = arrowContainer.position.x;
 									    }
 
 									   if(y<=0){
+									   	document.getElementById("scores").innerHTML += "<br>Missed Target";
+									   	document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
+									   	resetter = true;
+									   }
+
+									   
+
+									   if(arrowContainer.position.x >= 150){
+									   	hitted = true;
+
+									   	document.getElementById("scores").innerHTML += "<br>Too far away!!";
 									   	document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
 									   	resetter = true;
 									   }
@@ -413,6 +937,26 @@
 
 									arrowContainer.position.set(x, y, arrowContainer.position.z);
 									hitted = true;
+									if(monster_death && target){
+
+											
+											//renderer.render(scene, mobCamera);
+											target.visible = false;
+											monster_death.visible = true;
+
+											if(deathAnimation && trigger) {
+												monster_death.rotation.y = Math.PI;
+												deathAnimation.play();	
+												trigger = false;
+												killCam.enabled = true;
+											}
+
+
+											
+										
+									}
+
+									
 
 									// Calcolo punteggio
 									/*
@@ -431,9 +975,8 @@
 									else
 										scoredPoints += Math.floor(100 - 70 * Math.abs(1.15 - y));
 									
-
 									document.getElementById("scores").innerHTML = "score: " + scoredPoints.toString(); //+ scoredPoints
-
+									document.getElementById("scores").innerHTML += "<br>Good Job!";
 									document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
 									resetter = true;
 								}
@@ -444,6 +987,10 @@
 						if (timeOut > 0)
 							timeOut--;
 					}
+					THREE.AnimationHandler.update( clock.getDelta() );
+
+					
+				
 				}
 
 				init();

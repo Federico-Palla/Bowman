@@ -20,3 +20,32 @@ function getAngle(x1, y1, x2, y2){
 
 	return res;
 }
+
+//MATERIALS GENERATORS
+
+function generateMaterialMF( uniforms, diffuse, specular, normal){
+	diffuse.minFilter = THREE.LinearMipMapLinearFilter; 
+	diffuse.anisotropy = renderer.getMaxAnisotropy();
+	specular.minFilter = THREE.LinearMipMapLinearFilter; 
+	specular.anisotropy = renderer.getMaxAnisotropy();
+	normal.minFilter = THREE.LinearMipMapLinearFilter; 
+	normal.anisotropy = renderer.getMaxAnisotropy();
+	var shader = microFacetShader;
+	//var vs = document.getElementById("vertex").textContent;
+	//var fs = document.getElementById("fragmentDSN").textContent;
+	var material = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: shader.vertexShader, fragmentShader: shader.fragmentShader });
+
+	return material;
+}
+
+function generateMaterialL(uniforms, diffuse, normal){
+	diffuse.minFilter = THREE.LinearMipMapLinearFilter; 
+	diffuse.anisotropy = renderer.getMaxAnisotropy();
+	normal.minFilter = THREE.LinearMipMapLinearFilter; 
+	normal.anisotropy = renderer.getMaxAnisotropy();
+
+	var shader = lambertianShader;
+	var material = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: shader.vertexShader, fragmentShader: shader.fragmentShader });
+
+	return material;
+}
