@@ -90,6 +90,7 @@
 				var scoredPoints = 0;
 				var arrowCount = 3;
 				var empty = true;
+				var releaseCam = false;
 				//uniforms
 				var uniforms_normal, uniforms_brick, prat_uniforms, arrow_uniforms, bow_uniforms, uniforms_cart;
 
@@ -112,6 +113,7 @@
 				var lightPower = new THREE.Vector3(50.0, 50.0, 50.0);
 				var lightPowerRed = new THREE.Vector3(3500.0, 3500.0, 3500.0);
 				var lightPowerGreen = new THREE.Vector3(3500.0, 3500.0, 3500.0);
+				var pointLightPower = new THREE.Vector3(1500.0, 1500.0, 1500.0);
 
 				var redLight = new THREE.Vector3(1.0, 0.0, 0.0);
 				var greenLight = new THREE.Vector3(0.0, 1.0, 0.0);
@@ -238,6 +240,7 @@
 					resetter= false;
 					sceneActive = false;
 					slained = false;
+					trigger = true;
 
 					//INIZIALIZZAZIONE DELLE VARIABILI USATE NEI CALCOLI DELLA FISICA DEL PROIETTILE
 
@@ -254,8 +257,8 @@
 
 					scene.add(arrowCamera);
 
-					/*var light = new THREE.AmbientLight( 0x404040 ); // soft white light
-					scene.add( light );*/
+					var ambLight = new THREE.AmbientLight( 0x404040 ); // soft white light
+					scene.add( ambLight );
 
 					var light = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xffff00, wireframe:true}));
 					light.position.set( 0.0, 500.0, 0.0 );
@@ -269,15 +272,20 @@
 					light3.position.set( -4.0, 3.0, -4.0 );
 					scene.add( light3 );
 
+					var light4 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
+					light4.position.set( 0.0, 5.0, 1.0 );
+					scene.add( light4 );
+
+
 					composer = new THREE.EffectComposer( renderer );
 					composer.addPass( new THREE.RenderPass( scene, mainCamera ) );
 
 					killCam = new THREE.ShaderPass( killShader );
 					composer.addPass( killCam );
 
-											var effect = new THREE.ShaderPass( THREE.CopyShader);
-											effect.renderToScreen = true;
-											composer.addPass( effect );
+					var effect = new THREE.ShaderPass( THREE.CopyShader);
+					effect.renderToScreen = true;
+					composer.addPass( effect );
 											//killCam.enabled = false;
 
 
@@ -305,11 +313,13 @@
 						diffuseMap: {type: "t", value: diffuse_grass},
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
-						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
-
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) },
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
 						lightPower:	{ type: "v3", value: lightPower },
 						lightPower2:	{ type: "v3", value: lightPowerRed },
 						lightPower3:	{ type: "v3", value: NO_POWER },
+						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
 
 						normalMap: {type: "t", value: normal_grass },
 						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
@@ -344,7 +354,8 @@
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
 						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
-
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
 						lightPower:	{ type: "v3", value: lightPower },
 						lightPower2:	{ type: "v3", value: lightPowerRed },
 						lightPower3:	{ type: "v3", value: NO_POWER },
@@ -353,6 +364,7 @@
 						displacementMap: {type: "v2", value: displacement_floor},
 						displacementScale: {type: "f", value: 0.1},
 						times: {type: "f", value: 1.0},
+						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
 						
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
@@ -402,12 +414,14 @@
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
 						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
-
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
 						lightPower:	{ type: "v3", value: lightPower },
 						lightPower2:	{ type: "v3", value: lightPowerRed },
 						lightPower3:	{ type: "v3", value: NO_POWER },
 						normalMap: {type: "t", value: normal_grass },
 						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
 						
 						lightColor2: {type: "v3", value: redLight},
 						times: {type: "f", value: 120.0},
@@ -490,13 +504,15 @@
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
 						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
-
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
 						lightPower:	{ type: "v3", value: lightPower },
 						lightPower2:	{ type: "v3", value: lightPowerRed },
 						lightPower3:	{ type: "v3", value: NO_POWER },
 						normalMap: { type: "t", value: norm_bow },
 						normalScale: { type: "v2", value: new THREE.Vector2(1,1) },
 						//esperimento aggiungendo colore alle luci
+						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
 						
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
@@ -547,12 +563,13 @@
 					arrow_uniforms = {
 						specularMap: { type: "t", value: arrow_specular},
 						diffuseMap:	{ type: "t", value: arrow_diffuse},
-						ambient:	{ type: "v3", value: new THREE.Vector3() },
+						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
 						m: {type: "f", value: 0},
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
 						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
-
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
 						lightPower:	{ type: "v3", value: lightPower },
 						lightPower2:	{ type: "v3", value: lightPowerRed },
 						lightPower3:	{ type: "v3", value: NO_POWER },
@@ -565,7 +582,7 @@
 					};
 
 					
-					arrow_uniforms.ambient.value = (new THREE.Vector3( 0.1,0.1,0.1 ));
+					
 					arrow_uniforms.alpha.value = 0.1;
 					arrow_uniforms.s.value = 0.3;
 
@@ -630,11 +647,13 @@
 							LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 							LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
 							LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
-
+							LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
 							lightPower:	{ type: "v3", value: lightPower },
 							lightPower2:	{ type: "v3", value: lightPowerRed },
 							lightPower3:	{ type: "v3", value: NO_POWER },
 							normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+							ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
 					};
 
 
@@ -759,14 +778,22 @@
 						if(keyboard.pressed("1") && released){
 							mainActive = false;
 							sceneActive = false;
+							releaseCam = true;
 						}
 						if(keyboard.pressed("2")){
-							mainActive = true;
+							mainActive = true;3
 							sceneActive = false;
+							releaseCam = true;
 						}
 						if(keyboard.pressed("3")){
 							mainActive = false;
 							sceneActive = true;
+							releaseCam = true;
+						}
+						if(keyboard.pressed("4")&&hitted){
+							mainActive = false;
+							sceneActive = false;
+							releaseCam = false;
 						}
 
 						if(keyboard.pressed("space") && timeOut == 0 && !slained){
@@ -826,7 +853,7 @@
 							
 						}
 
-						if(hitted && monster_death && arrowContainer){
+						if(hitted && monster_death && arrowContainer && !releaseCam){
 							if(killCam.enabled){
 								arrowContainer.remove(mainCamera);
 								mainCamera.position.set(arrowContainer.position.x, 5, 5);
@@ -936,10 +963,11 @@
 								   t += 0.01667; 
 
 									arrowContainer.position.set(x, y, arrowContainer.position.z);
+									arrowObj.visible = false;
+									arrowContainer.visible = false;
 									hitted = true;
 									if(monster_death && target){
 
-											
 											//renderer.render(scene, mobCamera);
 											target.visible = false;
 											monster_death.visible = true;
@@ -956,19 +984,6 @@
 										
 									}
 
-									
-
-									// Calcolo punteggio
-									/*
-									if (y < 1.16 && y > 0.99)
-										scoredPoints = 100;
-									else if (y < 1.25 && y > 0.90)
-										scoredPoints = 70;
-									else if (y < 1.50 && y > 0.60)
-										scoredPoints = 30;
-									else if (y <= 1.9 && y >= 0.3)
-										scoredPoints = 10;
-									*/
 									
 									if (y <= 1.3 && y >= 1.0)
 										scoredPoints += 100;

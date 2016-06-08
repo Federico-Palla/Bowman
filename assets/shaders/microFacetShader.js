@@ -4,10 +4,12 @@ microFacetShader = {
 		"uniform vec3 LightPosition;",
 		"uniform vec3 LightPosition2;",
 		"uniform vec3 LightPosition3;",
+		"uniform vec3 LightPosition4;",
 
 		"varying vec3 lightVector;",
 		"varying vec3 lightVector2;",
 		"varying vec3 lightVector3;",
+		"varying vec3 lightVector4;",
 
 		"varying vec2 uVv;",
 		"varying vec3 transformedNormal;",
@@ -22,10 +24,12 @@ microFacetShader = {
 			"vec4 lPosition = viewMatrix * vec4( LightPosition, 1.0 );",
 			"vec4 lPosition2 = viewMatrix * vec4( LightPosition2, 1.0 );",
 			"vec4 lPosition3 = viewMatrix * vec4( LightPosition3, 1.0 );",
+			"vec4 lPosition4 = viewMatrix * vec4( LightPosition4, 1.0 );",
 			//"lightVector = vec3(0.0, 1.0, 1.0);",
 			"lightVector = normalize(lPosition.xyz);",
 			"lightVector2 = lPosition2.xyz - pointPosition;",
 			"lightVector3 = lPosition3.xyz - pointPosition;",
+			"lightVector4 = lPosition4.xyz - pointPosition;",
 
 			"uVv = uv;",
 			"gl_Position = projectionMatrix * vec4(pointPosition,1.0);",
@@ -35,6 +39,7 @@ microFacetShader = {
 			"uniform vec3 lightPower;",
 			"uniform vec3 lightPower2;",
 			"uniform vec3 lightPower3;",
+			"uniform vec3 lightPower4;",
 			"uniform sampler2D specularMap;",
 			"uniform float alpha;",
 			"uniform sampler2D diffuseMap;",
@@ -47,6 +52,7 @@ microFacetShader = {
 			"varying vec3 lightVector;",
 			"varying vec3 lightVector2;",
 			"varying vec3 lightVector3;",
+			"varying vec3 lightVector4;",
 			"varying vec2 uVv;",
 			"uniform sampler2D normalMap;",
 			"uniform vec2 normalScale;",
@@ -110,6 +116,9 @@ microFacetShader = {
 				"vec3 l3 				= normalize( lightVector3 );",
 				"vec3 h3 				= normalize( v+l3 );",
 
+				"vec3 l4 				= normalize( lightVector4 );",
+				"vec3 h4 				= normalize( v+l4 );",
+
 				"vec3  normal 			= perturbNormal2Arb( pointPosition, n );",
 				"float  NdotH    		= max(0.000001, dot( normal, h ));",
 				"float  VdotH     		= max(0.000001, dot( v, h ));",
@@ -123,6 +132,10 @@ microFacetShader = {
 				"float  NdotH3    		= max(0.000001, dot( normal, h3 ));",
 				"float  VdotH3    		= max(0.000001, dot( v, h3 ));",
 				"float  NdotL3			= max(0.000001, dot( normal, l3 ));",
+
+				"float  NdotH4    		= max(0.000001, dot( normal, h4 ));",
+				"float  VdotH4    		= max(0.000001, dot( v, h4 ));",
+				"float  NdotL4			= max(0.000001, dot( normal, l4 ));",
 
 				// specular BRDF
 				"vec3 Specular = F(VdotH) * G(VdotH) * D(NdotH) / 4.0;",
@@ -139,9 +152,23 @@ microFacetShader = {
 				"vec3 Specular3 = F(VdotH3) * G(VdotH3) * D(NdotH3) / 4.0;",
 				"vec3 beta3 = lightPower3 / ( 4.0  * PI * pow( length(lightVector3),2.0) );",
 
+				"vec3 Specular4 = F(VdotH4) * G(VdotH4) * D(NdotH4) / 4.0;",
+				
+				"vec3 beta4;",
+					"if(NdotL4 > cos(cos(PI/12.0))){",
+						"beta4 = 1.0 * lightPower4 / ( 4.0  * PI * pow( length(lightVector4),2.0) );",
+					"} else {",
+						"if(NdotL4 <= cos(cos(PI/6.0))){",
+							"beta4 = 0.0 * lightPower4 / ( 4.0  * PI * pow( length(lightVector4),2.0) );",
+						"} else {",
+							"vec3 beta4 = pow( ( ( NdotL4 - cos(PI/6.0) ) /( cos(PI/12.0)-cos(PI/6.0 ) )),15.0) * lightPower4 / ( 4.0  * PI * pow( length(lightVector4),2.0) );",
+						"}",
+					"}",
+
 				"gl_FragColor = vec4(beta * NdotL * ( s*c_diff + (1.0-s)*Specular) + ", 
 					"beta2 * NdotL2 * ( s*c_diff2 + (1.0-s)*Specular2) + ",
 					"beta3 * NdotL3 * ( s*c_diff3 + (1.0-s)*Specular3) + ",
+					"beta4 * NdotL4 * ( s*c_diff + (1.0-s)*Specular4) + ",
 					"ambient*c_diff, 1.0);",
 			"}"
 	].join("\n")
