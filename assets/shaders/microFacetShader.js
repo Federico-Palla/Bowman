@@ -165,11 +165,12 @@ microFacetShader = {
 						"}",
 					"}",
 
-				"gl_FragColor = vec4(beta * NdotL * ( s*c_diff + (1.0-s)*Specular) + ", 
-					"beta2 * NdotL2 * ( s*c_diff2 + (1.0-s)*Specular2) + ",
-					"beta3 * NdotL3 * ( s*c_diff3 + (1.0-s)*Specular3) + ",
-					"beta4 * NdotL4 * ( s*c_diff + (1.0-s)*Specular4) + ",
-					"ambient*c_diff, 1.0);",
+				"gl_FragColor = vec4((beta * NdotL * ( s*c_diff + (1.0-s)*Specular) + ", 
+									"beta2 * NdotL2 * ( s*c_diff2 + (1.0-s)*Specular2) + ",
+									"beta3 * NdotL3 * ( s*c_diff3 + (1.0-s)*Specular3) + ",
+									"beta4 * NdotL4 * ( s*c_diff + (1.0-s)*Specular4) + ",
+									"ambient*c_diff)",
+									"* vec3(0.7, 0.7, 0.7), 1.0);",	//correzione intensità luminosa in output (opzionale)
 			"}"
 	].join("\n")
 }

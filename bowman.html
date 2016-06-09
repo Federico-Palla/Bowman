@@ -112,9 +112,9 @@
 				//LUCI
 
 				var lightPower = new THREE.Vector3(50.0, 50.0, 50.0);
-				var lightPowerRed = new THREE.Vector3(3500.0, 3500.0, 3500.0);
-				var lightPowerGreen = new THREE.Vector3(3500.0, 3500.0, 3500.0);
-				var pointLightPower = new THREE.Vector3(1500.0, 1500.0, 1500.0);
+				var lightPowerRed = new THREE.Vector3(1500.0, 1500.0, 1500.0);
+				var lightPowerGreen = new THREE.Vector3(1500.0, 1500.0, 1500.0);
+				var pointLightPower = new THREE.Vector3(1000.0, 1000.0, 1000.0);
 
 				var redLight = new THREE.Vector3(1.0, 0.0, 0.0);
 				var greenLight = new THREE.Vector3(0.0, 1.0, 0.0);
@@ -200,8 +200,6 @@
 
 
 				
-
-				//console.log(vivo);
 				
 
 				document.body.appendChild(gui.domElement);
@@ -259,7 +257,7 @@
 
 					scene.add(arrowCamera);
 
-					var ambLight = new THREE.AmbientLight( 0x404040 ); // soft white light
+					var ambLight = new THREE.AmbientLight( 0xffffff ); // soft white light
 					scene.add( ambLight );
 
 					var light = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xffff00, wireframe:true}));
@@ -288,14 +286,7 @@
 					var effect = new THREE.ShaderPass( THREE.CopyShader);
 					effect.renderToScreen = true;
 					composer.addPass( effect );
-											//killCam.enabled = false;
 
-
-
-					//sun
-					/*var pointLight1 = new THREE.PointLight(0xffffff, 1, 0);
-					pointLight1.position.set(0, 1000, 0);
-					scene.add(pointLight1);*/
 
 					// FLOOR
 
@@ -925,10 +916,6 @@
 							cy = cy0;
 							cx = cx0;
 							arrowLoader = false;		
-						}
-
-						if(target){
-							console.log(slained);
 						}
 
 						if(target &&target.position.x < 1.05 && !slained){

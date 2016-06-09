@@ -134,7 +134,7 @@ groundShader = {
 					"beta2 * NdotL2 * rho2 + ",
 					"beta3 * NdotL3 * rho3 + ",
 					"beta4 * NdotL4 * rho + ambient * albedo;",
-					"gl_FragColor = vec4(outgoingRadiance, 1.0);",
+					"gl_FragColor = vec4(outgoingRadiance * vec3(0.7, 0.7, 0.7), 1.0);",
 				"}",
 
 	].join("\n"),
