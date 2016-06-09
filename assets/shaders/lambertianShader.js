@@ -90,10 +90,10 @@ lambertianShader = {
 					"vec3 l3 				= normalize( lightVector3 );",
 					"vec3 l4 				= normalize( lightVector4 );",
 
-					"float  NdotL 			= max(0.000001, dot( n, l )); ",
-					"float  NdotL2			= max(0.000001, dot( n, l2 ));",
-					"float  NdotL3			= max(0.000001, dot( n, l3 ));",
-					"float  NdotL4			= max(0.000001, dot( n, l4 ));",
+					"float  NdotL 			= max(0.000001, dot( normal, l )); ",
+					"float  NdotL2			= max(0.000001, dot( normal, l2 ));",
+					"float  NdotL3			= max(0.000001, dot( normal, l3 ));",
+					"float  NdotL4			= max(0.000001, dot( normal, l4 ));",
 
 					//albedo (colore del texel) / PI
 					"vec3 albedo = texture2D(diffuseMap,uVv).rgb;",			//per il colore della luce basta moltiplicarlo
@@ -125,7 +125,7 @@ lambertianShader = {
 					"beta2 * NdotL2 * rho2 + ",
 					"beta3 * NdotL3 * rho3 + ",
 					"beta4 * NdotL4 * rho  + ambient * albedo;",
-					"gl_FragColor = vec4(outgoingRadiance * vec3(0.7, 0.7, 0.7), 1.0);",
+					"gl_FragColor = vec4(outgoingRadiance , 1.0);",
 				"}",
 
 	].join("\n"),

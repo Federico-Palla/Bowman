@@ -445,6 +445,7 @@
 					underGeometry = new THREE.SphereGeometry( 250, 200, 200, 0, Math.PI);
 					underGround = new THREE.Mesh(underGeometry, underMaterial);
 					underGround.rotation.x = Math.PI / 2;
+					underGround.position.y = -0.5
 					scene.add(underGround);
 
 					// SKY

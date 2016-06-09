@@ -97,10 +97,10 @@ groundShader = {
 					"vec3 l3 				= normalize( lightVector3 );",
 					"vec3 l4 				= normalize( lightVector4 );",
 
-					"float  NdotL 			= max(0.000001, dot( n, l )); ",
-					"float  NdotL2			= max(0.000001, dot( n, l2 ));",
-					"float  NdotL3			= max(0.000001, dot( n, l3 ));",
-					"float  NdotL4			= max(0.000001, dot( n, l4 ));",
+					"float  NdotL 			= max(0.000001, dot( normal, l )); ",
+					"float  NdotL2			= max(0.000001, dot( normal, l2 ));",
+					"float  NdotL3			= max(0.000001, dot( normal, l3 ));",
+					"float  NdotL4			= max(0.000001, dot( normal, l4 ));",
 
 					//albedo (colore del texel) / PI
 					"vec3 albedo = texture2D(diffuseMap,uVv).rgb;",	//per il colore della luce basta moltiplicarlo
