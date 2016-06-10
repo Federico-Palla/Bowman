@@ -40,7 +40,7 @@
 	<body >
 		<div id='scoreboard'>
 			<h3 id='title'>BOWMAN</h3>
-			<h5 style="margin-top: 0px;">Press 1 to use Follow Camera - Press 2 to use MainCamera - Press 3 to inspect all the scene - Press space to ready/unready your arrow</h5>
+			<h5 style="margin-top: 0px;">Press 1 to use Follow Camera - Press 2 to use MainCamera - Press 3 to inspect the whole scene - Press space to ready/unready your arrow</h5>
 			<h2 id='scores'>score: 0</h2>
 		</div>
 		<div id='gameCanvas'>
@@ -68,21 +68,28 @@
 			<script src="lib/RenderPass.js"></script>
 			<script src="lib/MaskPass.js"></script>
 
+			<script src="lib/Tween.js"></script>
+
 			<script>
 
 				//DICHIARAZIONE DI TUTTE LE VARIABILI GLOBALI IN GIOCO
-
 				var scene, mainCamera, arrowCamera, targetCamera, sceneCamera;
 				var controls,sceneControls;
-				var mouse, keyboard;
+				var mouse = new THREE.Vector2();
+				var keyboard = new THREEx.KeyboardState();
 				var hitted, arrowLoader, mainActive, sceneActive, readyToFire, released, resetter;
 				var y0, x0, x, y;
 				var cy0, cx0, cx, cy;
 				var ft, rotationGravity, v0, theta, mass, t, t2;
 				var floor, floorMaterial, floorGeometry;
 				var underGround, underMaterial, underGeometry;
-				//var sky, skyMaterial, skyGeometry;
+
+				var pivot;
+
+
+				// Arrows related
 				var standardMaterial, bow, loader, arrowContainer, arrowObj, arrowBox, fakeArrow, archer, target, targetBox;
+				var arrArrow;
 				var arrowObj = null;
 				var fakeArrow = null;
 				var introOver;
@@ -91,38 +98,54 @@
 				var arrowCount = 3;
 				var empty = true;
 				var releaseCam = false;
-				
-				//uniforms
+
+				// Uniforms
 				var uniforms_normal, uniforms_brick, prat_uniforms, arrow_uniforms, bow_uniforms, uniforms_cart;
-
-				var arrArrow;
-
-				var pivot;
-
-				var monster_alive, monster_death, deathAnimation;
+				
+				// Monster related
+				var monster_alive, monster_death, monster_attack, deathAnimation, attackAnimation;
+				var monst_diff, monst_norm;
 				var trigger = true;
-				//var alive = true;
 
-				var keyboard = new THREEx.KeyboardState();
-				var pressOnce = 0;
-				var clock = new THREE.Clock();
+				// Sound related
+				var listener, playSound, killSound;
+				var showFatality, fatal_mesh, tween, tween_pos, tween_tar, tweenActive;
+
+				// Quaternions
+				var statue1, statue2, statue3;
+				var statueCounter = 0;
+				var q, q1, q2;
+				var tempo = 0.0;
+
+				// Column related
+				var arrStat = [];				
+				var preload = true;
+				var loader = new THREE.OBJLoader( );
+
+
+				// Kill-cam related
+				//var pressOnce = 0;					// CHECK IF NEEDED
+				var clock = new THREE.Clock(true);
 				var composer, killCam;
 				var color = Math.PI/2;
 
-				//LUCI
 
+				//LUCI
 				var lightPower = new THREE.Vector3(50.0, 50.0, 50.0);
-				var lightPowerRed = new THREE.Vector3(1500.0, 1500.0, 1500.0);
-				var lightPowerGreen = new THREE.Vector3(1500.0, 1500.0, 1500.0);
-				var pointLightPower = new THREE.Vector3(1000.0, 1000.0, 1000.0);
+				var lightPowerRed = new THREE.Vector3(3500.0, 3500.0, 3500.0);
+				var lightPowerGreen = new THREE.Vector3(3500.0, 3500.0, 3500.0);
+				var pointLightPower = new THREE.Vector3(1500.0, 1500.0, 1500.0);
 
 				var redLight = new THREE.Vector3(1.0, 0.0, 0.0);
 				var greenLight = new THREE.Vector3(0.0, 1.0, 0.0);
 				
 				var NO_POWER = new THREE.Vector3(0.0, 0.0, 0.0);
 
-				//INIZIALIZZAZIONE DEL RENDERER, DEGLI STATS E DELLA DAT.GUI
+				var light2, light3;
+				
 
+
+				//INIZIALIZZAZIONE DEL RENDERER, DEGLI STATS E DELLA DAT.GUI
 				var renderer = new THREE.WebGLRenderer({antialias:true});
 				renderer.setSize(window.innerWidth, window.innerHeight);
 				renderer.setClearColor(0xffffff, 1);
@@ -135,6 +158,7 @@
 				stats.domElement.style.zIndex = "2";
 				document.body.appendChild( stats.domElement );
 
+
 				// DAT GUI CREATION
 				var gui = new dat.GUI( { height: 4 * 32 - 1, autoPlace: false} );
 				gui.domElement.style.position = 'absolute';
@@ -146,65 +170,17 @@
 
 				gui.add(effectController, 'tension', 0.2, 0.6).name('Allungo').step(0.1);
 				gui.add(effectController, 'lb', 20, 70).name('Libraggio arco').step(5);
-				gui.add(effectController, 'target', 10, 100).step(10).name('Distanza Target').listen();
-
-				function loadNPC(){
-					var loader = new THREE.ColladaLoader();
-								loader.options.convertUpAxis = true;
-								loader.load( 'assets/animations/monster.dae', function ( collada ) {
-
-									monster_alive = collada.scene;	
-									monster_alive.traverse( function ( child ) {
-
-										if ( child instanceof THREE.SkinnedMesh ) {						
-											child.material.map = THREE.ImageUtils.loadTexture( "assets/textures/monster.jpg" );
-											var animation = new THREE.Animation( child, child.geometry.animation );
-											animation.play();
-										}
-									} );
-
-									monster_alive.scale.x = monster_alive.scale.y = monster_alive.scale.z = 0.002;
-									monster_alive.updateMatrix();
-									monster_alive.rotation.y = Math.PI;
-									monster_alive.position.x = effectController.target;
-									target = monster_alive;
-									scene.add(monster_alive);
-							
-								} );
-
-								// MOSTRO MORTO
-								var loader2 =  new THREE.ColladaLoader();
-								loader2.options.convertUpAxis = true;
-								loader2.load( 'assets/animations/monsterdeath.dae', function ( collada ) {
-
-									monster_death = collada.scene;
-
-									monster_death.traverse( function ( child ) {
-
-										if ( child instanceof THREE.SkinnedMesh ) {						
-
-											child.material.map = THREE.ImageUtils.loadTexture( "assets/textures/monster.jpg" );
-											deathAnimation = new THREE.Animation( child, child.geometry.animation );
-											deathAnimation.loop = false;						
-
-										}
-									} );
-
-					monster_death.scale.x = monster_death.scale.y = monster_death.scale.z = 0.002;
-					monster_death.updateMatrix();
-					monster_death.visible = false;
-					scene.add(monster_death);			
-
-				} );
-			}
-
-
-				
-				
-
+				gui.add(effectController, 'target', 20, 100).step(10).name('Distanza Target').listen();
 				document.body.appendChild(gui.domElement);
-				//FUNZIONE INIT CHE DA IL VIA ALLA CREAZIONE DI UNA NUOVA SCENA
+				
 
+
+				
+
+				
+
+				
+				// INIZIALIZZAZIONE DELLA SCENA
 				function init(){
 
 					loadNPC();
@@ -226,50 +202,59 @@
 
 
 					
-
-					mouse = new THREE.Vector2();
-					keyboard = new THREEx.KeyboardState();
-
-					hitted = false;					//variabile booleana che controlla se il targer viene centrato
-					mainActive = true;				//telecamera principale abilitata/disabilitata
-					readyToFire = false;			//freccia pronta ad essere scoccata
-					arrowLoader = true;				//variabile che gestisce il calcolo della posizione iniziale della freccia (da fare una sola volta)
-					released = false;				//freccia scoccata
-					introOver = false;				// animazione introduttiva da eseguire
-					resetter= false;
-					sceneActive = false;
-					slained = false;
-					trigger = true;
+					// Inizializzati globalmente
+					//mouse = new THREE.Vector2();
+					//keyboard = new THREEx.KeyboardState();					
+					
+					
+					readyToFire = false;			// freccia pronta 
+					released = false;				// freccia scoccata
+					arrowLoader = true;				//variabile che gestisce il calcolo della posizione iniziale della freccia (da fare una sola volta)				
+					
+					hitted = false;					// mostro colpito
+					slained = false;				// protagonista morto
+					trigger = true;					// animazioni mostro
 					
 
-					//INIZIALIZZAZIONE DELLE VARIABILI USATE NEI CALCOLI DELLA FISICA DEL PROIETTILE
 
+
+					//INIZIALIZZAZIONE DELLE VARIABILI USATE NEI CALCOLI DELLA FISICA DEL PROIETTILE
 					theta = 0; 						//theta è in gradi
 					mass = 0.025;					//massa della freccia in kg
 					t = 0;							//tempo
 					t2 = 0;							//tempo (arrowCamera)
 
+					tempo = 0.0;
+
 					count = 0;						//contatore ausiliario
 					timeOut = 0;
+
 					
+					// Gestione telecamere
+					introOver = false;				// animazione introduttiva
+					mainActive = true;				// camera principale 
+					sceneActive = false;			// camera della scena
+					resetter= false;				// possibilità di resettare
 					mainCamera.position.set(0, 0, 6);
 					arrowCamera.position.set(-2, 1.3, 0);
-
 					scene.add(arrowCamera);
 
-					var ambLight = new THREE.AmbientLight( 0xffffff ); // soft white light
+					// Luci scena
+					var ambLight = new THREE.AmbientLight( 0x404040 ); // soft white light
 					scene.add( ambLight );
 
 					var light = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xffff00, wireframe:true}));
 					light.position.set( 0.0, 500.0, 0.0 );
 					scene.add( light );
 
-					var light2 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xff0000, wireframe:true}));
-					light2.position.set( -4.0, 4.0, -4.0 );
+					light2 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xff0000, wireframe:true}));
+					light2.position.set( -4.0, 4.06, -4.0 );
+					
 					scene.add( light2 );
 					
-					var light3 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0x00ff00, wireframe:true}));
-					light3.position.set( -4.0, 3.0, -4.0 );
+					light3 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0x00ff00, wireframe:true}));
+					light3.position.set( -4.0, 4.06, -4.0 );		
+					light3.visible = false;			
 					scene.add( light3 );
 
 					var light4 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
@@ -277,6 +262,16 @@
 					scene.add( light4 );
 
 
+					// Audio scena
+					listener = new THREE.AudioListener();
+ 					mainCamera.add( listener );
+ 					playSound = false;
+
+ 					showFatality = false;
+ 					tweenActive = false; 			// tween "Fatality"
+
+
+ 					// Post processing
 					composer = new THREE.EffectComposer( renderer );
 					composer.addPass( new THREE.RenderPass( scene, mainCamera ) );
 
@@ -286,7 +281,14 @@
 					var effect = new THREE.ShaderPass( THREE.CopyShader);
 					effect.renderToScreen = true;
 					composer.addPass( effect );
+					//killCam.enabled = false;
 
+
+
+					//sun
+					/*var pointLight1 = new THREE.PointLight(0xffffff, 1, 0);
+					pointLight1.position.set(0, 1000, 0);
+					scene.add(pointLight1);*/
 
 					// FLOOR
 
@@ -326,14 +328,13 @@
 
 
 					var grass_material = new THREE.ShaderMaterial({ uniforms: uniforms_normal, vertexShader: groundShader.vertexShader, fragmentShader: groundShader.fragmentShader });
-					//grass_material.side = THREE.DoubleSide;
 
-					var cube = new THREE.Mesh( ground_geometry, grass_material );
-					cube.rotation.x = -90 * Math.PI / 180;
-					scene.add( cube );
+					var grassCube = new THREE.Mesh( ground_geometry, grass_material );
+					grassCube.rotation.x = -90 * Math.PI / 180;
+					scene.add( grassCube );
 
 					for(var i = 0; i < 28; i++){
-						var cubo = cube.clone();
+						var cubo = grassCube.clone();
 						cubo.position.x = 3.99 * i;
 						scene.add(cubo);
 					}
@@ -424,8 +425,6 @@
 					prat_uniforms.diffuseMap.value.wrapS = prat_uniforms.diffuseMap.value.wrapT = THREE.RepeatWrapping;
 					prat_uniforms.normalMap.value.wrapS = prat_uniforms.normalMap.value.wrapT = THREE.RepeatWrapping;
 
-					//var vs = document.getElementById("vertex").textContent;
-					//var fs = document.getElementById("fragment").textContent;
 
 					var prato_mat = new THREE.ShaderMaterial({uniforms: prat_uniforms, vertexShader: groundShader.vertexShader, fragmentShader: groundShader.fragmentShader});
 					var prato = new THREE.Mesh(prato_geometry, prato_mat);
@@ -445,15 +444,10 @@
 					underGeometry = new THREE.SphereGeometry( 250, 200, 200, 0, Math.PI);
 					underGround = new THREE.Mesh(underGeometry, underMaterial);
 					underGround.rotation.x = Math.PI / 2;
-					underGround.position.y = -0.5
+					underGround.position.y = -0.5;
 					scene.add(underGround);
 
-					// SKY
-					/*skyMaterial = new THREE.MeshLambertMaterial( {color: 0x77FFFC, side: THREE.BackSide } );
-					skyGeometry = new THREE.SphereGeometry( 900, 200, 200, 0, Math.PI);
-					sky = new THREE.Mesh(skyGeometry, skyMaterial);
-					sky.rotation.x = -Math.PI / 2;
-					scene.add(sky);*/
+					// Cubemap
 					var path = "assets/textures/TropicalSunnyDay/";
 					var format = ".png";
 
@@ -467,16 +461,16 @@
 
 					//Skybox
 					var shader = THREE.ShaderLib[ "cube" ];
-						shader.uniforms[ "tCube" ].value = textureCube;
+					shader.uniforms[ "tCube" ].value = textureCube;
 
-						var materiale = new THREE.ShaderMaterial( {
+					var materiale = new THREE.ShaderMaterial( {
 
-							fragmentShader: shader.fragmentShader,
-							vertexShader: shader.vertexShader,
-							uniforms: shader.uniforms,
-							side: THREE.BackSide
+						fragmentShader: shader.fragmentShader,
+						vertexShader: shader.vertexShader,
+						uniforms: shader.uniforms,
+						side: THREE.BackSide
 
-						} ),
+					} );
 
 					mesh = new THREE.Mesh( new THREE.BoxGeometry( 10000, 10000, 10000 ), materiale );
 					scene.add( mesh );
@@ -488,7 +482,7 @@
 
 					//LOADING BOW MESH
 					var diff_bow = THREE.ImageUtils.loadTexture("assets/textures/bow_diff.png");
-			//var spec_bow = THREE.ImageUtils.loadTexture("Textures/empty_spec.png");
+					//var spec_bow = THREE.ImageUtils.loadTexture("Textures/empty_spec.png");
 					var norm_bow = THREE.ImageUtils.loadTexture("assets/textures/bow_norm.png");
 
 			
@@ -512,23 +506,29 @@
 						lightColor3: {type: "v3", value: greenLight},
 					};
 
-				var bow_mat = generateMaterialL( bow_uniforms, diff_bow, norm_bow);
+					var bow_mat = generateMaterialL( bow_uniforms, diff_bow, norm_bow);
 
 					bow = new THREE.Object3D();
 					loader = new THREE.OBJLoader();
 					loader.load( 'assets/models/Bow.obj', function(object) { 
+
 						object.traverse(function (child) {
+
 						    if (child instanceof THREE.Mesh) {
 						    child.material = bow_mat;
 						    child.rotation.y = 90 * Math.PI/180;
 						    }
-						});
-						bow.add(object);
 
+						});
+
+						bow.add(object);
 						bow.visible = true;
-						} );
+
+					} );
+
 					bow.position.set(0,1.3,0);
 					scene.add(bow);
+
 
 					//CREATING ARROW CONTAINER
 					arrowContainer = new THREE.Object3D();
@@ -538,17 +538,16 @@
 
 					//CREATING ARCHER CONTAINER
 					archer = new THREE.Object3D();
-							archer.add(bow);
-							archer.add(arrowContainer);
-							scene.add(archer);
+					archer.add(bow);
+					archer.add(arrowContainer);
+					scene.add(archer);
 
 					//ARROW COLLISION BOX
 					arrowBox = new THREE.Box3( new THREE.Vector3(), new THREE.Vector3() );
 					
+
+
 					//LOADING ARROW MESH
-
-					
-
 					var arrow_diffuse = THREE.ImageUtils.loadTexture( "assets/textures/diffuse.png");
 					var arrow_specular = THREE.ImageUtils.loadTexture( "assets/textures/specular.png" );
 					var arrow_normal = THREE.ImageUtils.loadTexture( "assets/textures/normal.png" );
@@ -558,7 +557,6 @@
 						specularMap: { type: "t", value: arrow_specular},
 						diffuseMap:	{ type: "t", value: arrow_diffuse},
 						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
-						m: {type: "f", value: 0},
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
 						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
@@ -567,73 +565,56 @@
 						lightPower:	{ type: "v3", value: lightPower },
 						lightPower2:	{ type: "v3", value: lightPowerRed },
 						lightPower3:	{ type: "v3", value: NO_POWER },
-						alpha: {type: "f", value: 0},
-						s: {type: "f", value: 0},
+						alpha: {type: "f", value: 0.1},
+						s: {type: "f", value: 0.3},
 						normalMap: { type: "t", value: arrow_normal },
 						normalScale: { type: "v2", value: new THREE.Vector2(1,1) },
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
 					};
 
-					
-					
-					arrow_uniforms.alpha.value = 0.1;
-					arrow_uniforms.s.value = 0.3;
 
 					var arrow_material = generateMaterialMF( arrow_uniforms, arrow_diffuse, arrow_specular, arrow_normal);
 
 
-					loader = new THREE.OBJLoader( );
+					loader = new THREE.OBJLoader();
 					loader.load( 'assets/models/Arrow.obj', function ( object ) {
+
 						object.traverse(function (child) {
 						    if (child instanceof THREE.Mesh) {
 						    child.material = arrow_material;
 						    }
 						});
+
 						arrowObj = object;
 						arrowContainer.add(arrowObj);
 						arrowObj.visible = false;
+
 						fakeArrow = arrowObj.clone();
 						fakeArrow.traverse(function (child) {
+
 						    if (child instanceof THREE.Mesh) {
 						    child.material = arrow_material;
 						    }
+
 						});
+
 						fakeArrow.visible = true;
 						bow.add(fakeArrow);
 					
 						arrowCamera.lookAt(arrowContainer.position);
 					} );
 
-					//LOADING TARGET MESH
-					//work in progress
-					/*
-					target = new THREE.Object3D();
-					loader.load('assets/models/Target.obj', function (object ) {
-
-						object.traverse(function (child) {
-						    if (child instanceof THREE.Mesh) {
-						    child.material = new THREE.MeshBasicMaterial({color: 0x0000ff});
-						    }
-						});
-
-						target.add(object);
-						});*/
-
-					//loading semaforo
-					
-
-					//target.rotation.y = 90 * Math.PI / 180;	
-					//scene.add(target);
 
 					// TARGET COLLISION BOX
 					targetBox = new THREE.Box3( new THREE.Vector3(), new THREE.Vector3() );
 
-					//LOADING CART MESH
 
+
+					//LOADING CART MESH
 					var cart_diff = THREE.ImageUtils.loadTexture( "assets/textures/cart_diff.png" );
 					var cart_norm = THREE.ImageUtils.loadTexture( "assets/textures/cart_norm.png" );
-					var loader = new THREE.OBJLoader( );
+					
 
 					uniforms_cart = {
 							diffuseMap: {type: "t", value: cart_diff},
@@ -655,21 +636,151 @@
 					var cart_mat = generateMaterialL(uniforms_cart, cart_diff, cart_norm);
 					
 					loader.load( 'assets/models/Cart.obj', function ( object ) {
+
 						object.traverse(function (child) {
 						    if (child instanceof THREE.Mesh) {
 							    child.material = cart_mat;
 						    }
 						});
-						//object.rotation.x = 90 * Math.PI/180;
 						object.scale.set(0.02, 0.02, 0.02);
-						//object.position.set(2.0, -0.5, -2.5);
 						object.position.set(-4.0, -0.5, 2.0);
 						object.rotation.y = 90 * Math.PI / 180;
 						scene.add(object);
+
 					} );
 
-					//postprocessing greyscale on missed target
 
+					// LOADING STREETLAMP 
+					var lamp_diffuse = THREE.ImageUtils.loadTexture( "assets/textures/lamp_diff.jpg");
+					var lamp_specular = THREE.ImageUtils.loadTexture( "assets/textures/lamp_spec.png" );
+					var lamp_normal = THREE.ImageUtils.loadTexture( "assets/textures/lamp_norm.png" );
+
+					//setting uniforms for lamp
+					lamp_uniforms = {
+						specularMap: 	{ type: "t", value: lamp_specular}, 
+						diffuseMap:		{ type: "t", value: lamp_diffuse},
+						ambient:		{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						m: 				{type: "f", value: 0},
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
+						lightPower:		{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+						alpha: 			{type: "f", value: 0.1},
+						s: 				{type: "f", value: 0.3},
+						normalMap: 		{ type: "t", value: lamp_normal },
+						normalScale: 	{ type: "v2", value: new THREE.Vector2(1,1) },
+						lightColor2: 	{type: "v3", value: redLight},
+						lightColor3: 	{type: "v3", value: greenLight},
+					};
+
+
+					var lamp_material = generateMaterialMF( lamp_uniforms, lamp_diffuse, lamp_specular, lamp_normal);
+
+					loader.load( 'assets/models/Lamp.obj', function ( object ) {
+
+						object.traverse(function (child) {
+						    if (child instanceof THREE.Mesh) {
+							    child.material = lamp_material;
+						    }
+						});
+
+						var scale = 0.3;
+						object.scale.set(scale, scale, scale);
+						object.position.set(-4.0, -0.5, -4.0);
+						object.rotation.y = 90 * Math.PI / 180;
+						scene.add(object);
+
+					} );
+
+
+
+					// Loading TROPHY
+					// monst
+					monst_diff = THREE.ImageUtils.loadTexture("assets/textures/monster.jpg");
+					monst_norm = THREE.ImageUtils.loadTexture("assets/textures/monster_norm.png");
+
+
+					monst_uniforms = {
+						diffuseMap:		{ type: "t", value: monst_diff},
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
+						lightPower:		{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+						normalMap: 		{ type: "t", value: null },
+						normalScale: 	{ type: "v2", value: new THREE.Vector2(1,1) },
+						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },						
+						lightColor2: {type: "v3", value: redLight},
+						lightColor3: {type: "v3", value: greenLight},
+					};
+
+
+
+
+					q = new THREE.Quaternion();
+					q.setFromAxisAngle((new THREE.Vector3(1,2,4)).normalize(),Math.PI / 4);					
+
+					q1 = new THREE.Quaternion();
+					q1.setFromAxisAngle((new THREE.Vector3(0,1,0)).normalize(),Math.PI / 2);
+					
+					q2 = new THREE.Quaternion();
+					q2.setFromAxisAngle((new THREE.Vector3(0,1,0)).normalize(),Math.PI);
+
+					
+
+					// column
+					var column_diff = THREE.ImageUtils.loadTexture("assets/textures/column_diff.png");
+					var column_spec = THREE.ImageUtils.loadTexture("assets/textures/column_spec.png");
+					var column_norm = THREE.ImageUtils.loadTexture("assets/textures/column_norm.png");
+
+
+					column_uniforms = {
+						specularMap: 	{ type: "t", value: column_spec}, 
+						diffuseMap:		{ type: "t", value: column_diff},
+						ambient:		{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						lightPower4:	{ type: "v3", value: pointLightPower },
+						lightPower:		{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+						alpha: 			{type: "f", value: 0.1},
+						s: 				{type: "f", value: 0.3},
+						normalMap: 		{ type: "t", value: column_norm },
+						normalScale: 	{ type: "v2", value: new THREE.Vector2(1,1) },
+						lightColor2: 	{type: "v3", value: redLight},
+						lightColor3: 	{type: "v3", value: greenLight},
+					};
+
+					// create columns
+					loadColumns(loader, column_uniforms, column_diff, column_spec, column_norm);
+					var monst_material = generateMaterialL( monst_uniforms, monst_diff, monst_norm);
+
+					loader.load( 'assets/models/Monster.obj', function ( object ) {
+						object.traverse(function (child) {
+						    if (child instanceof THREE.Mesh) {
+							    child.material = monst_material;
+						    }
+						});
+							var scale = 0.005;
+							statue1 = object;
+							statue1.scale.set(scale, scale, scale);
+					} );					
+
+					// END TROPHY
+
+
+					
+					// Postprocessing greyscale on missed target
 					pivot = new THREE.Object3D();
 					scene.add(pivot);
 					pivot.add(sceneCamera);
@@ -704,7 +815,7 @@
 				}	
 				
 				function onDocumentMouseDown(event){
-				    if (readyToFire && !slained) {
+				    if (readyToFire) {
 					released = true;
 					controls.enabled = true;
 				    }
@@ -714,11 +825,26 @@
 				window.addEventListener( 'mousemove', onMouseMove, false );
 				window.addEventListener( 'mousedown', onDocumentMouseDown, false );
 
+				
 
+				// Rendering loop
 				function render(){
+
 					requestAnimationFrame(render);
-					
 					stats.update();
+
+					// Quaternion time - used for statues rotation
+					tempo = tempo + 0.0166;
+					
+					for (var i =0; i<arrStat.length; i++) {
+						if(arrStat[i]) {
+							q.copy(q1);
+							arrStat[i].quaternion.copy(q.slerp(q2,tempo));
+						}	
+					}					
+					
+					
+					
 					//creazione faretra
 					if(fakeArrow && empty){
 						for(var i = 0; i < arrowCount-1; i++){
@@ -732,8 +858,12 @@
 						empty = false;
 					}
 
-					// RENDERIZZA ANIMAZIONE INIZIALE
+					if(preload){
+						loadStatues();
+						preload =false;
+					}
 
+					// RENDERIZZA ANIMAZIONE INIZIALE
 					if (!introOver && target) {
 						target.position.x = effectController.target;
 						targetCamera.lookAt(arrowContainer.position);
@@ -750,9 +880,11 @@
 
 					// RENDERIZZA IL GIOCO
 					else {
-						if(target && monster_death && !hitted && target.position.x > 1){
-							target.position.x = target.position.x - 0.05;
+
+						if(target && monster_death && monster_attack && !hitted && target.position.x > 1){
+							target.position.x = target.position.x - 0.08;
 							monster_death.position.x = target.position.x;
+							monster_attack.position.x = target.position.x;
 							effectController.target = target.position.x;
 						}
 						
@@ -760,7 +892,6 @@
 						sceneControls.update();
 
 						if(!readyToFire && target){
-							//target.position.x = effectController.target;  // target posizionato dall'utente
 							pivot.position.x = effectController.target / 2;
 						}
 
@@ -769,51 +900,59 @@
 							fakeArrow.position.x = -( percenTns / 100);
 						}
 						
+
+						// Gestione telecamere
 						if(!hitted){
+
 							if(keyboard.pressed("1") && released){
 								mainActive = false;
 								sceneActive = false;
-								
 							}
 							if(keyboard.pressed("2")){
-								mainActive = true;3
+								mainActive = true;
 								sceneActive = false;
-								
 							}
 							if(keyboard.pressed("3")){
 								mainActive = false;
 								sceneActive = true;
-								
 							}
-								
-							}
-						else{
+
+						} else {
+
 							if(keyboard.pressed("1") && released){
 								mainActive = false;
 								sceneActive = false;
 								releaseCam = true;
+								fatal_mesh.visible = false;
 							}
 							if(keyboard.pressed("2")){
-								mainActive = true;3
+								mainActive = true;
 								sceneActive = false;
 								releaseCam = true;
+								fatal_mesh.visible = false;
 							}
 							if(keyboard.pressed("3")){
 								mainActive = false;
 								sceneActive = true;
 								releaseCam = true;
+								fatal_mesh.visible = false;
 							}
-							if(keyboard.pressed("4")){
+							if(keyboard.pressed("4")){  
 								mainActive = false;
 								sceneActive = false;
 								releaseCam = false;
+								fatal_mesh.visible = true;
 							}
+
 						}
 
+
+						
+
 						if(keyboard.pressed("space") && timeOut == 0 && !slained){
+
 							timeOut = 30;
 							readyToFire = !readyToFire; 
-							
 							
 
 							if(readyToFire){
@@ -824,6 +963,7 @@
 								arrow_uniforms.lightPower3.value = lightPowerGreen;
 								bow_uniforms.lightPower3.value = lightPowerGreen;
 								uniforms_cart.lightPower3.value = lightPowerGreen;
+								lamp_uniforms.lightPower3.value = lightPowerGreen;
 
 								uniforms_normal.lightPower2.value = NO_POWER;
 								uniforms_brick.lightPower2.value = NO_POWER;
@@ -831,13 +971,20 @@
 								arrow_uniforms.lightPower2.value = NO_POWER;
 								bow_uniforms.lightPower2.value = NO_POWER;
 								uniforms_cart.lightPower2.value = NO_POWER;
+								lamp_uniforms.lightPower2.value = NO_POWER;
+
+								light2.visible = false;
+								light3.visible = true;
+
 							} else {
+
 								uniforms_normal.lightPower2.value = lightPowerRed;
 								uniforms_brick.lightPower2.value = lightPowerRed;
 								prat_uniforms.lightPower2.value = lightPowerRed;
 								arrow_uniforms.lightPower2.value = lightPowerRed;
 								bow_uniforms.lightPower2.value = lightPowerRed;
 								uniforms_cart.lightPower2.value = lightPowerRed;
+								lamp_uniforms.lightPower2.value = lightPowerRed;
 
 								uniforms_normal.lightPower3.value = NO_POWER;
 								uniforms_brick.lightPower3.value = NO_POWER;
@@ -845,19 +992,20 @@
 								arrow_uniforms.lightPower3.value = NO_POWER;
 								bow_uniforms.lightPower3.value = NO_POWER;
 								uniforms_cart.lightPower3.value = NO_POWER;
+								lamp_uniforms.lightPower3.value = NO_POWER;
+
+								light2.visible = true;
+								light3.visible = false;
 								
 							}
 
-							/*fakeArrow.traverse(function (child) {
-							   if (child instanceof THREE.Mesh) {
-							     	child.material  =  readyToFire ? new THREE.MeshBasicMaterial({color: 0x00ff00}) : new THREE.MeshBasicMaterial({color: 0xff0000});
-							   }
-							}) */
 						}
 
+
 						if(keyboard.pressed("E") && resetter){
+
 							arrowCount--;
-							slained = false;
+							//slained = false;		// resettare slained?!
 
 							if(arrowCount>0){
 								empty = true;
@@ -866,12 +1014,45 @@
 								document.getElementById("scores").innerHTML += "<br>GAME OVER";
 								
 								resetter = false;
+
 							}
+
+							for(var i = 0; i<arrStat.length;i++){
+								scene.remove(arrStat[i]);
+							}
+							preload = true;
 							
 						}
 
+
+						// GAME logic
 						if(hitted && monster_death && arrowContainer && !releaseCam){
-							if(killCam.enabled){
+
+							if(killCam.enabled) {
+
+								if(!playSound) {
+									killSound = new THREE.Audio( listener );
+									killSound.load( 'assets/sounds/monster_scream.wav' );
+									killSound.setRefDistance( 18 );
+									playSound = true;
+								}
+
+								if(!showFatality) {
+
+									playFatality();
+									tween.start();
+									showFatality = true;
+
+									statueCounter++;
+									
+
+								}
+
+								if(tweenActive) {
+									TWEEN.update();									
+								}
+
+
 								arrowContainer.remove(mainCamera);
 								mainCamera.position.set(arrowContainer.position.x, 5, 5);
 								mainCamera.lookAt(monster_death.position);
@@ -894,17 +1075,19 @@
 											}
 											killCam.uniforms.time.value = (killCam.uniforms.time.value + 0.2) % 10;
 							composer.render();
-						}else{
-							if(mainActive){
-							renderer.render(scene, mainCamera);
+
 						} else {
-							sceneActive ? renderer.render(scene, sceneCamera) : renderer.render(scene, arrowCamera);
-						}
+
+							if(mainActive){
+								renderer.render(scene, mainCamera);
+							} else {
+								sceneActive ? renderer.render(scene, sceneCamera) : renderer.render(scene, arrowCamera);
+							}
+
 						}					
 						
 
 						
-						//tempo = 1/60 secondi = 0.016666666667
 						if(arrowObj && arrowLoader ){
 							
 							y0=arrowContainer.position.y;
@@ -919,13 +1102,33 @@
 							arrowLoader = false;		
 						}
 
-						if(target &&target.position.x < 1.05 && !slained){
+						if(target && target.position.x < 5.05 && !slained) {   
+
+							target.visible = false;
+							monster_attack.visible = true;	
+
+							if(attackAnimation && trigger) {					
+								monster_attack.rotation.y = Math.PI;
+								attackAnimation.play();	
+								trigger = false;
+							}
+
+							if(!playSound) {
+									killSound = new THREE.Audio( listener );
+									killSound.load( 'assets/sounds/archer_scream.wav' );
+									killSound.setRefDistance( 15 );
+									playSound = true;
+							}
+
+							
 							document.getElementById("scores").innerHTML += "<br>You have been slained!";
 							document.getElementById("scores").innerHTML += "<br>GAME OVER";
 							document.getElementById("scores").innerHTML += "<br>Refresh the page to play more";
 							resetter = false;
 							slained = true;
+
 						}
+
 
 						if(arrowObj && released){
 
@@ -953,42 +1156,38 @@
 										cy = computeYShot(cy0, theta, v0, t2);
 										t2+=0.01667;
 
-										arrowCamera.position.set(cx, cy, arrowContainer.position.z);
-										
+										arrowCamera.position.set(cx, cy, arrowContainer.position.z);							
+									}
 
-										//underGround.position.x = arrowContainer.position.x;
-									    }
-
-									   if(y<=0){
+									if(y<=0){
 									   	document.getElementById("scores").innerHTML += "<br>Missed Target";
 									   	document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
 									   	resetter = true;
-									   }
+									}
 
 									   
 
-									   if(arrowContainer.position.x >= 150){
+									if(arrowContainer.position.x >= 150){
 									   	hitted = true;
 
 									   	document.getElementById("scores").innerHTML += "<br>Too far away!!";
 									   	document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
 									   	resetter = true;
-									   }
+									}
 
 								} else {
 
 									x = computeXShot(x0, theta, v0, t);
-								   y = computeYShot(y0, theta, v0, t);
-								   t += 0.01667; 
+								   	y = computeYShot(y0, theta, v0, t);
+								  	t += 0.01667; 
 
 									arrowContainer.position.set(x, y, arrowContainer.position.z);
 									arrowObj.visible = false;
 									arrowContainer.visible = false;
-									effectController.target = 100;
 									hitted = true;
+
 									if(monster_death && target){
 
-											//renderer.render(scene, mobCamera);
 											target.visible = false;
 											monster_death.visible = true;
 
@@ -998,13 +1197,10 @@
 												trigger = false;
 												killCam.enabled = true;
 											}
-
-
-											
 										
 									}
 
-									
+									// Punteggio assegnato
 									if (y <= 1.3 && y >= 1.0)
 										scoredPoints += 100;
 									else
@@ -1014,17 +1210,20 @@
 									document.getElementById("scores").innerHTML += "<br>Good Job!";
 									document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
 									resetter = true;
+
 								}
+
 							}
 
 						}
+
 						count++;
 						if (timeOut > 0)
 							timeOut--;
-					}
-					THREE.AnimationHandler.update( clock.getDelta() );
 
-					
+					}
+
+					THREE.AnimationHandler.update( clock.getDelta() );				
 				
 				}
 
