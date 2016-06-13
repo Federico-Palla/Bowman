@@ -12,17 +12,15 @@ function getCoordComponent(c1, c2){
 
 function getAngle(x1, y1, x2, y2){
 	var edge = computeDist(x1, y1, x2, y2);
-	//var xComp = getCoordComponent(x1, x2);
 	var yComp = getCoordComponent(y1, y2);
 
 	var res = Math.asin(yComp / edge)/0.0174533;
-	//var res = Math.asin(sinDeg);
 
 	return res;
 }
 
 //MATERIALS GENERATORS
-
+// Generatore di materiale con shader MICROFACET
 function generateMaterialMF( uniforms, diffuse, specular, normal){
 	diffuse.minFilter = THREE.LinearMipMapLinearFilter; 
 	diffuse.anisotropy = renderer.getMaxAnisotropy();
@@ -31,13 +29,12 @@ function generateMaterialMF( uniforms, diffuse, specular, normal){
 	normal.minFilter = THREE.LinearMipMapLinearFilter; 
 	normal.anisotropy = renderer.getMaxAnisotropy();
 	var shader = microFacetShader;
-	//var vs = document.getElementById("vertex").textContent;
-	//var fs = document.getElementById("fragmentDSN").textContent;
 	var material = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: shader.vertexShader, fragmentShader: shader.fragmentShader });
 
 	return material;
 }
 
+// Generatore di materiale con shader LAMBERTIAN
 function generateMaterialL(uniforms, diffuse, normal){
 	diffuse.minFilter = THREE.LinearMipMapLinearFilter; 
 	diffuse.anisotropy = renderer.getMaxAnisotropy();
@@ -50,6 +47,7 @@ function generateMaterialL(uniforms, diffuse, normal){
 	return material;
 }
 
+// Testo drop-down "Fatality"
 function playFatality() {
 
 	var fatal_texr = THREE.ImageUtils.loadTexture( "assets/textures/fatality.png" );
@@ -59,8 +57,6 @@ function playFatality() {
 
 	fatal_mesh.rotation.x = -90 * Math.PI / 180; 				
 	scene.add(fatal_mesh);
-
-
 		
 	tween_pos = 	{ x: monster_death.position.x, y: monster_death.position.y + 10, z: monster_death.position.y + 5 };
 	tween_tar = 	{ x: monster_death.position.x, y: monster_death.position.y + 1.5, z: monster_death.position.y + 5 };
@@ -74,13 +70,11 @@ function playFatality() {
 	tween.easing(TWEEN.Easing.Bounce.Out);
 								
 
-	tweenActive = true;	// attiva per il render loop
-
-					
+	tweenActive = true;	// attiva per il render loop					
 
 }
 
-// Caricamento dei files .dae
+// Caricamento dei files .dae (animazioni del mostro)
 function loadNPC(){
 
 	// Load moving monster
@@ -163,6 +157,7 @@ function loadNPC(){
 
 }
 
+// Caricamento colonne trofei
 function loadColumns(loader, column_uniforms, column_diff, column_norm) {
 
 	var column_material = generateMaterialL( column_uniforms, column_diff, column_norm);
@@ -192,6 +187,7 @@ function loadColumns(loader, column_uniforms, column_diff, column_norm) {
 
 }
 
+// Caricamento delle statuette
 function loadStatues() {
 	arrStat = [];
 	var zpos = -4.0;

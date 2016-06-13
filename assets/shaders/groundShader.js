@@ -24,8 +24,7 @@ groundShader = {
 			"vec3 pointPosition = (modelViewMatrix * vec4( position + normal *texture2D( displacementMap, uv*times).xyz * displacementScale -0.49 , 1.0 )).xyz;",
 
 			"vec4 lPosition = viewMatrix * vec4( LightPosition, 1.0 );",
-			"lightVector = normalize(lPosition.xyz);",//- pointPosition;",
-			//"lightVector = vec3(0.0, 1.0, 0.6);",
+			"lightVector = normalize(lPosition.xyz);",
 
 			"vec4 lPosition2 = viewMatrix * vec4( LightPosition2, 1.0 );",
 			"lightVector2 = lPosition2.xyz - pointPosition;",
@@ -59,12 +58,9 @@ groundShader = {
 			"uniform sampler2D normalMap;",
 			"uniform vec2 normalScale;",
 			"uniform vec3 ambient;",
-
-			//temp
 			
 			"uniform vec3 lightColor2;",
 			"uniform vec3 lightColor3;",
-			//pemt
 
 			"#extension GL_OES_standard_derivatives : enable",
 
@@ -112,21 +108,19 @@ groundShader = {
 					"vec3 albedo3 = texture2D(diffuseMap,uVv).rgb * lightColor3.rgb;",
 					"vec3 rho3 =  albedo3.rgb / PI;",
 
-					//"vec3 beta = lightPower / ( 4.0  * PI * pow( length(lightVector),2.0) );",
 					"vec3 beta = lightPower / ( 4.0  * PI * pow( length(lightVector),2.0) );",
 					"vec3 beta2 = lightPower2 / ( 4.0  * PI * pow( length(lightVector2),2.0) );",
 					"vec3 beta3 = lightPower3 / ( 4.0  * PI * pow( length(lightVector3),2.0) );",
 					
-					//SPOTLIGHT equation
-					
+					//SPOTLIGHT equation					
 					"vec3 beta4;",
 					"if(NdotL4 > cos(cos(PI/12.0))){",
 						"beta4 = 1.0 * lightPower4 / ( 4.0  * PI * pow( length(lightVector4),2.0) );",
 					"} else {",
 						"if(NdotL4 <= cos(cos(PI/6.0))){",
-							"beta4 = 0.0 * lightPower4 / ( 4.0  * PI * pow( length(lightVector4),2.0) );",
+							"beta4 = 0.0 * lightPower4;",
 						"} else {",
-							"vec3 beta4 = pow( ( ( NdotL4 - cos(PI/6.0) ) /( cos(PI/12.0)-cos(PI/6.0 ) )),15.0) * lightPower4 / ( 4.0  * PI * pow( length(lightVector4),2.0) );",
+							"beta4 = pow( ( ( NdotL4 - cos(PI/6.0) ) /( cos(PI/12.0)-cos(PI/6.0 ) )),15.0) * lightPower4 / ( 4.0  * PI * pow( length(lightVector4),2.0) );",
 						"}",
 					"}",
 

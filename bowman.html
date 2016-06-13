@@ -83,9 +83,7 @@
 				var ft, rotationGravity, v0, theta, mass, t, t2;
 				var floor, floorMaterial, floorGeometry;
 				var underGround, underMaterial, underGeometry;
-
 				var pivot;
-
 
 				// Arrows related
 				var standardMaterial, bow, loader, arrowContainer, arrowObj, arrowBox, fakeArrow, archer, target, targetBox;
@@ -120,33 +118,27 @@
 				var tempo = 0.0;
 
 				// Column related
-				var arrStat = [];				
+				var arrStat = [];						// array per le statue		
 				var preload = true;
 				var loader = new THREE.OBJLoader( );
 
-
 				// Kill-cam related
-				//var pressOnce = 0;					// CHECK IF NEEDED
 				var clock = new THREE.Clock(true);
 				var composer, killCam;
 				var color = Math.PI/2;
-
 
 				//LUCI
 				var lightPower = new THREE.Vector3(25.0, 25.0, 25.0);
 				var lightPowerRed = new THREE.Vector3(2000.0, 2000.0, 2000.0);
 				var lightPowerGreen = new THREE.Vector3(2000.0, 2000.0, 2000.0);
 				var pointLightPower = new THREE.Vector3(700.0, 700.0, 700.0);
-
 				var redLight = new THREE.Vector3(1.0, 0.0, 0.0);
 				var greenLight = new THREE.Vector3(0.0, 1.0, 0.0);
-				
 				var NO_POWER = new THREE.Vector3(0.0, 0.0, 0.0);
-
 				var light2, light3;
+
+				var ambiente = new THREE.Vector3( 0.3,0.3,0.3 );	//termine ambiente
 				
-
-
 				//INIZIALIZZAZIONE DEL RENDERER, DEGLI STATS E DELLA DAT.GUI
 				var renderer = new THREE.WebGLRenderer({antialias:true});
 				renderer.setSize(window.innerWidth, window.innerHeight);
@@ -159,7 +151,6 @@
 				stats.domElement.style.bottom = '0px';
 				stats.domElement.style.zIndex = "2";
 				document.body.appendChild( stats.domElement );
-
 
 				// DAT GUI CREATION
 				var gui = new dat.GUI( { height: 4 * 32 - 1, autoPlace: false} );
@@ -174,13 +165,6 @@
 				gui.add(effectController, 'lb', 20, 70).name('Libraggio arco').step(5);
 				gui.add(effectController, 'target', 20, 100).step(10).name('Distanza Target').listen();
 				document.body.appendChild(gui.domElement);
-				
-
-
-				
-
-				
-
 				
 				// INIZIALIZZAZIONE DELLA SCENA
 				function init(){
@@ -197,17 +181,11 @@
 					targetCamera.position.z = 3;
 				   	sceneCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 15000);
 
-
 					controls = new THREE.OrbitControls( mainCamera, renderer.domElement );
 					controls.enabled = false;
 					sceneControls = new THREE.OrbitControls( sceneCamera, renderer.domElement );
-
-
 					
-					// Inizializzati globalmente
-					//mouse = new THREE.Vector2();
-					//keyboard = new THREEx.KeyboardState();					
-					
+					//INIZIALIZZAZIONE DELLE VARIABILI				
 					
 					readyToFire = false;			// freccia pronta 
 					released = false;				// freccia scoccata
@@ -217,11 +195,7 @@
 					slained = false;				// protagonista morto
 					trigger = true;					// animazioni mostro
 					enableWriting = true;			// screen info
-					missed = false;
-					
-					var ambiente = new THREE.Vector3( 0.3,0.3,0.3 )
-
-
+					missed = false;					//bersaglio mancato
 
 					//INIZIALIZZAZIONE DELLE VARIABILI USATE NEI CALCOLI DELLA FISICA DEL PROIETTILE
 					theta = 0; 						//theta è in gradi
@@ -229,39 +203,48 @@
 					t = 0;							//tempo
 					t2 = 0;							//tempo (arrowCamera)
 
-					tempo = 0.0;
+					tempo = 0.0;					//tempo (quaternion)
 
-					count = 0;						//contatore ausiliario
-					timeOut = 0;
+					//contatori ausiliari
 
+					count = 0;						
+					timeOut = 0;					
 					
 					// Gestione telecamere
 					introOver = false;				// animazione introduttiva
 					mainActive = true;				// camera principale 
 					sceneActive = false;			// camera della scena
-					resetter= false;				// possibilità di resettare
+					resetter = false;				// possibilità di resettare
+
 					mainCamera.position.set(0, 0, 6);
 					arrowCamera.position.set(-2, 1.3, 0);
 					scene.add(arrowCamera);
 
-					// Luci scena
+					// LUCI
+					// Ambient light per la mesh del mostro
 					var ambLight = new THREE.AmbientLight( 0x404040 ); // soft white light
 					scene.add( ambLight );
 
+					//LUCI DEFINITE MANUALMENTE
+
+					//Directional Light
 					var light = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xffff00, wireframe:true}));
 					light.position.set( 0.0, 500.0, 0.0 );
 					scene.add( light );
 
+					//Point Light (rossa)
 					light2 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xff0000, wireframe:true}));
 					light2.position.set( -4.0, 4.06, -4.0 );
-					
 					scene.add( light2 );
 					
+					//Point Light (verde)
 					light3 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0x00ff00, wireframe:true}));
-					light3.position.set( -4.0, 4.06, -4.0 );		
-					light3.visible = false;			
+					light3.position.set( -4.0, 4.06, -4.0 );
+					//inizialmente la luce verde non è visibile
+					light3.visible = false;						
 					scene.add( light3 );
 
+					//Spot Light
 					var light4 = new THREE.Mesh( new THREE.SphereGeometry( 0.2, 16, 16), new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
 					light4.position.set( 0.0, 5.0, 1.0 );
 					scene.add( light4 );
@@ -272,6 +255,7 @@
  					mainCamera.add( listener );
  					playSound = false;
 
+ 					//Gestione Fatality
  					showFatality = false;
  					tweenActive = false; 			// tween "Fatality"
 
@@ -286,16 +270,10 @@
 					var effect = new THREE.ShaderPass( THREE.CopyShader);
 					effect.renderToScreen = true;
 					composer.addPass( effect );
-					//killCam.enabled = false;
 
+					// GENERAZIONE DELLA SCENA
 
-
-					//sun
-					/*var pointLight1 = new THREE.PointLight(0xffffff, 1, 0);
-					pointLight1.position.set(0, 1000, 0);
-					scene.add(pointLight1);*/
-
-					// FLOOR
+					//PRATO (displacement)
 
 					var diffuse_grass = THREE.ImageUtils.loadTexture( "assets/textures/grass_diffuse.png" );
 					var normal_grass = THREE.ImageUtils.loadTexture( "assets/textures/grass_norm.png" );
@@ -320,13 +298,11 @@
 						lightPower2:	{ type: "v3", value: lightPowerRed },
 						lightPower3:	{ type: "v3", value: NO_POWER },
 						ambient:	{ type: "v3", value: ambiente },
-
 						normalMap: {type: "t", value: normal_grass },
 						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
 						displacementMap: {type: "v2", value: displacement_grass},
 						displacementScale: {type: "f", value: displacementScale},
 						times: {type: "f", value: 1.0},
-						
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
 					};
@@ -343,6 +319,8 @@
 						cubo.position.x = 3.99 * i;
 						scene.add(cubo);
 					}
+
+					//PORZIONE PAVIMENTATA DELLA SCENA (displacement)
 
 					var diffuse_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_diffuse.jpg" );
 					var normal_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_normal.jpg" );
@@ -364,11 +342,9 @@
 						displacementScale: {type: "f", value: 0.1},
 						times: {type: "f", value: 1.0},
 						ambient:	{ type: "v3", value: ambiente },
-						
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
 					};
-
 
 					var floor_material = new THREE.ShaderMaterial({ uniforms: uniforms_brick, vertexShader: groundShader.vertexShader, fragmentShader: groundShader.fragmentShader });
 
@@ -404,7 +380,7 @@
 					scene.add( floor8 );
 					scene.add( floor9 );
 
-
+					//PRATO (no displacement)
 
 					var prato_geometry = new THREE.PlaneBufferGeometry(500, 500);
 
@@ -421,7 +397,6 @@
 						normalMap: {type: "t", value: normal_grass },
 						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
 						ambient:	{ type: "v3", value: ambiente },
-						
 						lightColor2: {type: "v3", value: redLight},
 						times: {type: "f", value: 120.0},
 						lightColor3: {type: "v3", value: greenLight},
@@ -430,19 +405,10 @@
 					prat_uniforms.diffuseMap.value.wrapS = prat_uniforms.diffuseMap.value.wrapT = THREE.RepeatWrapping;
 					prat_uniforms.normalMap.value.wrapS = prat_uniforms.normalMap.value.wrapT = THREE.RepeatWrapping;
 
-
 					var prato_mat = new THREE.ShaderMaterial({uniforms: prat_uniforms, vertexShader: groundShader.vertexShader, fragmentShader: groundShader.fragmentShader});
 					var prato = new THREE.Mesh(prato_geometry, prato_mat);
 					prato.rotation.x = -90 * Math.PI / 180;
 					scene.add(prato);
-
-					/*
-					floorMaterial = new THREE.MeshBasicMaterial( { color: 0x028D27, side: THREE.DoubleSide } );
-					floorGeometry = new THREE.CircleGeometry(2000, 200);
-					floor = new THREE.Mesh(floorGeometry, floorMaterial);
-					floor.rotation.x = Math.PI / 2;
-					scene.add(floor);	
-					*/
 
 					// UNDERGROUND
 					underMaterial = new THREE.MeshBasicMaterial( {color: 0x493000,  side: THREE.BackSide} );
@@ -452,7 +418,7 @@
 					underGround.position.y = -0.5;
 					scene.add(underGround);
 
-					// Cubemap
+					// ENVIRONMENT MAP
 					var path = "assets/textures/TropicalSunnyDay/";
 					var format = ".png";
 
@@ -464,7 +430,6 @@
 
 					var textureCube = new THREE.ImageUtils.loadTextureCube( urls );
 
-					//Skybox
 					var shader = THREE.ShaderLib[ "cube" ];
 					shader.uniforms[ "tCube" ].value = textureCube;
 
@@ -480,17 +445,16 @@
 					mesh = new THREE.Mesh( new THREE.BoxGeometry( 10000, 10000, 10000 ), materiale );
 					scene.add( mesh );
 
+					//Inizializzazione frecce
 					arrowObj = null;
 					fakeArrow = null;
 
-					document.getElementById("scores").innerHTML = "score: " + scoredPoints.toString(); //+ scoredPoints
+					//Visualizzazione punteggio
+					document.getElementById("scores").innerHTML = "score: " + scoredPoints.toString();
 
 					//LOADING BOW MESH
 					var diff_bow = THREE.ImageUtils.loadTexture("assets/textures/bow_diff.png");
-					//var spec_bow = THREE.ImageUtils.loadTexture("Textures/empty_spec.png");
 					var norm_bow = THREE.ImageUtils.loadTexture("assets/textures/bow_norm.png");
-
-			
 
 					bow_uniforms = {
 						diffuseMap:	{ type: "t", value: diff_bow},
@@ -504,9 +468,7 @@
 						lightPower3:	{ type: "v3", value: NO_POWER },
 						normalMap: { type: "t", value: norm_bow },
 						normalScale: { type: "v2", value: new THREE.Vector2(1,1) },
-						//esperimento aggiungendo colore alle luci
 						ambient:	{ type: "v3", value: ambiente },
-						
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
 					};
@@ -534,7 +496,6 @@
 					bow.position.set(0,1.3,0);
 					scene.add(bow);
 
-
 					//CREATING ARROW CONTAINER
 					arrowContainer = new THREE.Object3D();
 					scene.add(arrowContainer);
@@ -550,14 +511,11 @@
 					//ARROW COLLISION BOX
 					arrowBox = new THREE.Box3( new THREE.Vector3(), new THREE.Vector3() );
 					
-
-
 					//LOADING ARROW MESH
 					var arrow_diffuse = THREE.ImageUtils.loadTexture( "assets/textures/diffuse.png");
 					var arrow_specular = THREE.ImageUtils.loadTexture( "assets/textures/specular.png" );
 					var arrow_normal = THREE.ImageUtils.loadTexture( "assets/textures/normal.png" );
 
-					//setting uniforms for arrow
 					arrow_uniforms = {
 						specularMap: { type: "t", value: arrow_specular},
 						diffuseMap:	{ type: "t", value: arrow_diffuse},
@@ -578,9 +536,7 @@
 						lightColor3: {type: "v3", value: greenLight},
 					};
 
-
 					var arrow_material = generateMaterialMF( arrow_uniforms, arrow_diffuse, arrow_specular, arrow_normal);
-
 
 					loader = new THREE.OBJLoader();
 					loader.load( 'assets/models/Arrow.obj', function ( object ) {
@@ -610,18 +566,14 @@
 						arrowCamera.lookAt(arrowContainer.position);
 					} );
 
-
 					// TARGET COLLISION BOX
 					targetBox = new THREE.Box3( new THREE.Vector3(), new THREE.Vector3() );
-
-
 
 					//LOADING CART MESH
 					var cart_diff = THREE.ImageUtils.loadTexture( "assets/textures/cart_diff.png" );
 					var cart_norm = THREE.ImageUtils.loadTexture( "assets/textures/cart_norm.png" );
 					var cart_spec = THREE.ImageUtils.loadTexture( "assets/textures/cart_spec.png" );
 					
-
 					uniforms_cart = {
 						diffuseMap: {type: "t", value: cart_diff},
 						normalMap: {type: "t", value: cart_norm },
@@ -640,8 +592,6 @@
 						ambient:	{ type: "v3", value: ambiente },
 					};
 
-
-
 					var cart_mat = generateMaterialMF(uniforms_cart, cart_diff, cart_spec, cart_norm);
 					
 					loader.load( 'assets/models/Cart.obj', function ( object ) {
@@ -658,13 +608,11 @@
 
 					} );
 
-
 					// LOADING STREETLAMP 
 					var lamp_diffuse = THREE.ImageUtils.loadTexture( "assets/textures/lamp_diff.jpg");
 					var lamp_specular = THREE.ImageUtils.loadTexture( "assets/textures/lamp_spec.png" );
 					var lamp_normal = THREE.ImageUtils.loadTexture( "assets/textures/lamp_norm.png" );
 
-					//setting uniforms for lamp
 					lamp_uniforms = {
 						specularMap: 	{ type: "t", value: lamp_specular}, 
 						diffuseMap:		{ type: "t", value: lamp_diffuse},
@@ -686,7 +634,6 @@
 						lightColor3: 	{type: "v3", value: greenLight},
 					};
 
-
 					var lamp_material = generateMaterialMF( lamp_uniforms, lamp_diffuse, lamp_specular, lamp_normal);
 
 					loader.load( 'assets/models/Lamp.obj', function ( object ) {
@@ -705,10 +652,9 @@
 
 					} );
 
+					// LOADING TROPHY (Column + unanimated monster mesh)
+					// Indica la quantità di mostri uccisi
 
-
-					// Loading TROPHY
-					// monst
 					monst_diff = THREE.ImageUtils.loadTexture("assets/textures/monster.jpg");
 					monst_norm = THREE.ImageUtils.loadTexture("assets/textures/monster_norm.png");
 
@@ -730,8 +676,7 @@
 						lightColor3: {type: "v3", value: greenLight},
 					};
 
-
-
+					//Setup dei Quaternion
 
 					q = new THREE.Quaternion();
 					q.setFromAxisAngle((new THREE.Vector3(1,2,4)).normalize(),Math.PI / 4);					
@@ -742,13 +687,10 @@
 					q2 = new THREE.Quaternion();
 					q2.setFromAxisAngle((new THREE.Vector3(0,1,0)).normalize(),Math.PI);
 
-					
-
-					// column
+					// COLONNA
 					var column_diff = THREE.ImageUtils.loadTexture("assets/textures/column_diff.png");
 					var column_spec = THREE.ImageUtils.loadTexture("assets/textures/column_spec.png");
 					var column_norm = THREE.ImageUtils.loadTexture("assets/textures/column_norm.png");
-
 
 					column_uniforms = {
 						specularMap: 	{ type: "t", value: column_spec}, 
@@ -770,8 +712,10 @@
 						lightColor3: 	{type: "v3", value: greenLight},
 					};
 
-					// create columns
 					loadColumns(loader, column_uniforms, column_diff, column_norm);
+
+					//MONSTER MESH
+
 					var monst_material = generateMaterialL( monst_uniforms, monst_diff, monst_norm);
 
 					loader.load( 'assets/models/Monster.obj', function ( object ) {
@@ -783,9 +727,7 @@
 							var scale = 0.005;
 							statue1 = object;
 							statue1.scale.set(scale, scale, scale);
-					} );					
-
-					// END TROPHY
+					} );
 
 					// SOUNDS
 					killSound = new THREE.PositionalAudio( listener );
@@ -800,8 +742,7 @@
 					failSound.load( 'assets/sounds/fail_sound.wav' );
 					failSound.setRefDistance( 18 );
 
-					
-					// Postprocessing greyscale on missed target
+					//Pivot: utile per osservare l'intera scena mediante la scene camera
 					pivot = new THREE.Object3D();
 					scene.add(pivot);
 					pivot.add(sceneCamera);
@@ -810,7 +751,7 @@
 
 				}
 
-
+				// Al movimento del mouse l'arco ruota, fornendo l'angolo per il calcolo della traiettoria del proiettile
 				function onMouseMove( event ) {
 					
 					if(!released && mainActive){
@@ -834,7 +775,8 @@
 					}
 
 				}	
-				
+
+				// Al click del mouse, se si è pronti a sparare, viene rilasciata la freccia
 				function onDocumentMouseDown(event){
 				    if (readyToFire) {
 					released = true;
@@ -842,21 +784,18 @@
 				    }
 				}
 					
-
 				window.addEventListener( 'mousemove', onMouseMove, false );
 				window.addEventListener( 'mousedown', onDocumentMouseDown, false );
 
-				
-
-				// Rendering loop
+				// RENDETING LOOP
 				function render(){
 
 					requestAnimationFrame(render);
 					stats.update();
 
-					// Quaternion time - used for statues rotation
-					tempo = tempo + 0.0166;
+					tempo = tempo + 0.0166;		//tempo aggiornato ogni frame
 					
+					//ciclo per l'animazione delle statue
 					for (var i =0; i<arrStat.length; i++) {
 						if(arrStat[i]) {
 							q.copy(q1);
@@ -864,21 +803,25 @@
 						}	
 					}					
 					
-					
-					
-					//creazione faretra
+					//Creazione FARETRA: all'inizio del gioco l'arcere puo' sparare 3 freccie
+					// una gia' incoccata, le altre 2 appoggiate sul carretto
 					if(fakeArrow && empty){
+						//se esiste la fakeArrow e la faretra è vuota
 						for(var i = 0; i < arrowCount-1; i++){
+
 							var spareArrow = fakeArrow.clone();
-							
+
 							spareArrow.position.set(-4.35, 0.5, 2.0 + i*0.2);
 							spareArrow.rotation.z = -50 * Math.PI / 180;
 
 							scene.add(spareArrow);
 						}
+
 						empty = false;
+
 					}
 
+					//Precaricamento delle statue in base a quanti mostri sono stati uccisi
 					if(preload){
 						loadStatues();
 						preload =false;
@@ -902,27 +845,29 @@
 					// RENDERIZZA IL GIOCO
 					else {
 
+						sceneControls.update();
+
+						//Avanzamento del mostro verso il giocatore
 						if(target && monster_death && monster_attack && !hitted && target.position.x > 1 && !missed){
 							target.position.x = target.position.x - 0.08;
 							monster_death.position.x = target.position.x;
 							monster_attack.position.x = target.position.x;
 							effectController.target = target.position.x;
 						}
-						
 
-						sceneControls.update();
-
+						//Riposizionamento del pivot in base alla posizione del target
 						if(!readyToFire && target){
 							pivot.position.x = effectController.target / 2;
 						}
 
+						//In base all'allungo impostato la freccia va indietro prima di essere rilasciata: questo per dare la sensazione di tensione dell'arco e maggiore forza applicata al proiettile
 						var percenTns = effectController.tension * 100 / 0.6;
 						if(fakeArrow){
 							fakeArrow.position.x = -( percenTns / 100);
 						}
 						
-
 						// Gestione telecamere
+						// Aggiunta una quarta telecamera in caso il mostro venga colpito
 						if(!hitted){
 
 							if(keyboard.pressed("1") && released){
@@ -967,9 +912,9 @@
 
 						}
 
-
-						
-
+						// Premendo Spazio la freccia viene sbloccata ed è pronta per essere sparata (premendo nuovamente si può bloccarla di nuovo)
+						// Viene usato un semaforo per indicare all'utente se la freccia è pronta (VERDE) o meno (ROSSO)
+						// Un timeout di 30 frame serve a prevenire lo spam del tasto
 						if(keyboard.pressed("space") && timeOut == 0 && !slained){
 
 							timeOut = 30;
@@ -1026,18 +971,18 @@
 
 						}
 
-
+						// Il tasto E serve a re inizializzare la scena in modo da poter scagliare un'altra freccia
+						// NOTA: Non è un refresh della pagina
 						if(keyboard.pressed("E") && resetter){
 
 							arrowCount--;
-							//slained = false;		// resettare slained?!
 
 							if(arrowCount>0){
 								empty = true;
-								init();
+								init();	
 							}else {
 								document.getElementById("scores").innerHTML += "<br>GAME OVER";
-								
+								document.getElementById("scores").innerHTML += "<br>Refresh the page to play more";
 								resetter = false;
 
 							}
@@ -1050,17 +995,20 @@
 						}
 
 
-						// GAME logic
+						// GAME LOGIC
 						if(hitted && monster_death && arrowContainer && !releaseCam){
-
+							// Se il mostro viene colpito, parte l'effetto di post Processing descritto in KillCamShader.js
+							// Viene riprodotto un suono di morte del mostro 
 							if(killCam.enabled) {
 
+								// Urlo del mostro
 								if(!playSound) {
 									monster_death.add(monsterKillSound);
 									monsterKillSound.play();
 									playSound = true;
 								}
 
+								// Aggiunta di un testo mobile mediante Tween.js 
 								if(!showFatality) {
 
 									playFatality();
@@ -1068,22 +1016,23 @@
 									showFatality = true;
 
 									statueCounter++;
-									
-
+					
 								}
 
+								// Update dell'animazione tween 
 								if(tweenActive) {
 									TWEEN.update();									
 								}
-
 
 								arrowContainer.remove(mainCamera);
 								mainCamera.position.set(arrowContainer.position.x, 5, 5);
 								mainCamera.lookAt(monster_death.position);
 								
+								// Modificando le uniform del killCamShader, aggiungiamo distrurbo alla scena e facciamo pulsare di rosso lo schermo (lentamente)
 								if(killCam.uniforms.amount.value < 1.0 ){
 									killCam.uniforms.amount.value += 0.01;
 								} else {
+
 									if(killCam.uniforms.index.value < 1.0 ){
 										killCam.uniforms.index.value += 0.01;
 									} else {
@@ -1095,6 +1044,7 @@
 											killCam.uniforms.color.value.x = 0.7; //ecco
 										}
 									}
+
 								}
 
 							}
@@ -1104,6 +1054,7 @@
 
 						} else {
 
+							// Vengono mantenute le tre camere principali
 							if(mainActive){
 								renderer.render(scene, mainCamera);
 							} else {
@@ -1113,7 +1064,7 @@
 						}					
 						
 
-						
+						// Riposizionamento della freccia per ogni frame
 						if(arrowObj && arrowLoader ){
 							
 							y0=arrowContainer.position.y;
@@ -1126,24 +1077,9 @@
 							cy = cy0;
 							cx = cx0;
 							arrowLoader = false;		
-						}
-
-						if(killCam.enabled && slained) {
-								
-							//arrowContainer.remove(mainCamera);
-							//mainCamera.position.set(arrowContainer.position.x, 5, 5);
-							//mainCamera.lookAt(monster_death.position);
+						}						
 							
-							if(killCam.uniforms.amount.value < 1.0 ){
-								killCam.uniforms.amount.value += 0.01;
-							} 
-							
-							killCam.uniforms.color.value = new THREE.Vector3(0.0, 0.0, 0.0);
-							//killCam.uniforms.time.value = (killCam.uniforms.time.value + 0.2) % 10;
-							//composer.render();
-						}
-							
-
+						// Quando il mostro si avvicina troppo al giocatore, lo attacca e uccide (la partita termina)
 						if(target && target.position.x < 5.05 && !slained) {   
 
 							target.visible = false;
@@ -1156,15 +1092,13 @@
 								trigger = false;
 							}
 
+							// Riproduzione suono di morte arcere
 							if(!playSound) {
 									killSound.play();
 									playSound = true;
 							}
-
-
-
-							
-
+						
+							// Stampa informazioni su schermo
 							if(enableWriting) {
 								document.getElementById("scores").style.color = "red";
 								document.getElementById("scores").innerHTML += "<br>You have been slained!";
@@ -1173,29 +1107,30 @@
 								enableWriting = false;
 							}
 
-							resetter = false;
+							resetter = false;		// impossibile re inizializzare la scena una volta uccisi dal mostro
 							slained = true;
 
 						}
 
-
+						// Lancio effettivo della freccia
 						if(arrowObj && released){
 
 							controls.update();
 							arrowObj.visible = true;
-							fakeArrow.visible = false;
+							fakeArrow.visible = false;		// viene nascosta la freccia usata nella scelta dell'angolazione del tiro 
 
 						    if( y>=0 && !hitted){
 
+						    	// Bounding volumes per implementare i colliders
 								arrowBox.setFromObject(arrowObj);
 								targetBox.setFromObject(target);
 
-
+								// Controllo intersezione dei bounding volumes
 								if(!arrowBox.isIntersectionBox(targetBox)){
 
 								    x = computeXShot(x0, theta, v0, t);
 								    y = computeYShot(y0, theta, v0, t);
-								    t+=0.01667;
+								    t += 0.01667;
 
 								    arrowObj.rotation.z -= rotationGravity;
 								    arrowContainer.position.set(x, y, arrowContainer.position.z);
@@ -1208,7 +1143,7 @@
 										arrowCamera.position.set(cx, cy, arrowContainer.position.z);							
 									}
 
-									if(y<=0) {
+									if(y<=0) {				// se la freccia ha toccato terra
 
 										missed = true;
 										arrowContainer.add(failSound);
@@ -1224,9 +1159,7 @@
 
 									}
 
-									   
-
-									if(arrowContainer.position.x >= 150) {
+									if(arrowContainer.position.x >= 150) {		// se la freccia è troppo lontana
 
 									   	missed = true;
 									    arrowContainer.remove(mainCamera);
@@ -1259,7 +1192,7 @@
 											target.visible = false;
 											monster_death.visible = true;
 
-											if(deathAnimation && trigger) {
+											if(deathAnimation && trigger) {				// animazione di morte del mostro
 												monster_death.rotation.y = Math.PI;
 												deathAnimation.play();	
 												trigger = false;
@@ -1268,7 +1201,7 @@
 										
 									}
 
-									// Punteggio assegnato
+									// Punteggio assegnato al tiro
 									if (y <= 1.3 && y >= 1.0)
 										scoredPoints += 100;
 									else
@@ -1288,13 +1221,13 @@
 
 						}
 
-						count++;
-						if (timeOut > 0)
+						count++;			// il calcolo della traiettoria del colpo viene eseguito ogni 60 frame
+						if (timeOut > 0)	// timeout per evitare spam di un tasto
 							timeOut--;
 
 					}
 
-					THREE.AnimationHandler.update( clock.getDelta() );				
+					THREE.AnimationHandler.update( clock.getDelta() );		// animation handler del mostro			
 				
 				}
 

@@ -46,12 +46,10 @@ uniforms: {
 							"vec2 sc = vec2(mod(vUv.x * sCount, 1.0), mod( vUv.x * sCount, 1.0 ) );",
 							"original_color += texture2D(tDiffuse, vUv).rgb * vec3( sc.x, sc.y, sc.x ) * sIntensity;",
 
-					// interpolate between source and result by intensity
-					"original_color =texture2D(tDiffuse, vUv).rgb + clamp( nIntensity, 0.0,1.0 ) * ( original_color - texture2D(tDiffuse, vUv).rgb );",
+							// interpolate between source and result by intensity
+							"original_color =texture2D(tDiffuse, vUv).rgb + clamp( nIntensity, 0.0,1.0 ) * ( original_color - texture2D(tDiffuse, vUv).rgb );",
 
-					// convert to grayscale if desired
-
-
+							// convert to grayscale if desired
 							"vec3 luminance_converter = vec3(0.2126, 0.7152, 0.0722);",
 							"float luminance = dot(original_color, luminance_converter);",
 							"vec3 saturation = mix(mix(original_color, vec3(luminance),amount), mix(original_color, vec3(luminance)*color,amount), index);",

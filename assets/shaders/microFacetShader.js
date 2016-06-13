@@ -25,7 +25,6 @@ microFacetShader = {
 			"vec4 lPosition2 = viewMatrix * vec4( LightPosition2, 1.0 );",
 			"vec4 lPosition3 = viewMatrix * vec4( LightPosition3, 1.0 );",
 			"vec4 lPosition4 = viewMatrix * vec4( LightPosition4, 1.0 );",
-			//"lightVector = vec3(0.0, 1.0, 1.0);",
 			"lightVector = normalize(lPosition.xyz);",
 			"lightVector2 = lPosition2.xyz - pointPosition;",
 			"lightVector3 = lPosition3.xyz - pointPosition;",
@@ -139,7 +138,6 @@ microFacetShader = {
 
 				// specular BRDF
 				"vec3 Specular = F(VdotH) * G(VdotH) * D(NdotH) / 4.0;",
-				//"vec3 beta = lightPower / ( 4.0  * PI * pow( length(lightVector),2.0) );",
 				"vec3 beta = lightPower / ( 4.0  * PI * pow( length(lightVector),2.0) );",
 				"vec3 c_diff = texture2D( diffuseMap, uVv).rgb;",
 				"vec3 c_diff2 = texture2D( diffuseMap, uVv).rgb * lightColor2;",

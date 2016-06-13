@@ -23,7 +23,6 @@ lambertianShader = {
 			"vec4 lPosition2 = viewMatrix * vec4( LightPosition2, 1.0 );",
 			"vec4 lPosition3 = viewMatrix * vec4( LightPosition3, 1.0 );",
 			"vec4 lPosition4 = viewMatrix * vec4( LightPosition4, 1.0 );",
-			//"lightVector = vec3(0.0, 1.0, 1.0);",
 			"lightVector = normalize(lPosition.xyz);",
 			"lightVector2 = lPosition2.xyz - pointPosition;",
 			"lightVector3 = lPosition3.xyz - pointPosition;",
@@ -52,12 +51,9 @@ lambertianShader = {
 			"uniform sampler2D normalMap;",
 			"uniform vec2 normalScale;",
 			"uniform vec3 ambient;",
-
-			//temp
 			
 			"uniform vec3 lightColor2;",
 			"uniform vec3 lightColor3;",
-			//pemt
 
 			"#extension GL_OES_standard_derivatives : enable",
 
@@ -106,7 +102,6 @@ lambertianShader = {
 					"vec3 rho3 =  albedo3.rgb / PI;",
 
 					"vec3 beta = lightPower / ( 4.0  * PI * pow( length(lightVector),2.0) );",
-					//"vec3 beta = lightPower * 0.005;",
 					"vec3 beta2 = lightPower2 / ( 4.0  * PI * pow( length(lightVector2),2.0) );",
 					"vec3 beta3 = lightPower3 / ( 4.0  * PI * pow( length(lightVector3),2.0) );",
 
