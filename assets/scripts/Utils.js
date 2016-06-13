@@ -62,12 +62,13 @@ function playFatality() {
 
 
 		
-	tween_pos = 	{ x: monster_death.position.x, y: monster_death.position.y + 10, z: monster_death.position.y + 2 };
-	tween_tar = 	{ x: monster_death.position.x, y: monster_death.position.y + 1.5, z: monster_death.position.y + 2 };
+	tween_pos = 	{ x: monster_death.position.x, y: monster_death.position.y + 10, z: monster_death.position.y + 5 };
+	tween_tar = 	{ x: monster_death.position.x, y: monster_death.position.y + 1.5, z: monster_death.position.y + 5 };
 	tween = new TWEEN.Tween(tween_pos).to(tween_tar, 3000);
 
 	tween.onUpdate( function(){
 		fatal_mesh.position.x = tween_pos.x;
+		fatal_mesh.position.y = tween_pos.y;
 		fatal_mesh.position.y = tween_pos.y;
 	} );	
 	tween.easing(TWEEN.Easing.Bounce.Out);
@@ -162,9 +163,9 @@ function loadNPC(){
 
 }
 
-function loadColumns(loader, column_uniforms, column_diff, column_spec, column_norm) {
+function loadColumns(loader, column_uniforms, column_diff, column_norm) {
 
-	var column_material = generateMaterialMF( column_uniforms, column_diff, column_spec, column_norm);
+	var column_material = generateMaterialL( column_uniforms, column_diff, column_norm);
 	var col2, col3;
 
 	loader.load( 'assets/models/Column.obj', function ( object ) {
@@ -174,17 +175,18 @@ function loadColumns(loader, column_uniforms, column_diff, column_spec, column_n
 		    }
 		});
 
+		var zpos = -4.0;
 		var scale = 0.003;
 		//object.scale.set(scale, scale, scale);
-		object.position.set(2.0, -0.45, -2.0);
+		object.position.set(2.0, -0.45, zpos);
 		scene.add(object);
 
 		col2 = object.clone();
-		col2.position.set(4.0, -0.45, -2.0);
+		col2.position.set(4.0, -0.45, zpos);
 		scene.add(col2);
 
 		col3 = object.clone();
-		col3.position.set(6.0, -0.45, -2.0);
+		col3.position.set(6.0, -0.45, zpos);
 		scene.add(col3);
 	} );
 
@@ -192,11 +194,12 @@ function loadColumns(loader, column_uniforms, column_diff, column_spec, column_n
 
 function loadStatues() {
 	arrStat = [];
+	var zpos = -4.0;
 
 	if(statue1){
 		for(var i=1; i<=statueCounter; i++) {
 			var statue = statue1.clone();
-			statue.position.set(i*2.0, 0.6, -2.0);
+			statue.position.set(i*2.0, 0.6, zpos);
 			statue.quaternion.set(q.x, q.y, q.z, q.w);
 			arrStat.push(statue);
 			scene.add(statue);

@@ -106,9 +106,11 @@
 				var monster_alive, monster_death, monster_attack, deathAnimation, attackAnimation;
 				var monst_diff, monst_norm;
 				var trigger = true;
+				var enableWriting = true;
+				var missed = false;
 
 				// Sound related
-				var listener, playSound, killSound;
+				var listener, playSound, killSound, monsterKillSound, failSound;
 				var showFatality, fatal_mesh, tween, tween_pos, tween_tar, tweenActive;
 
 				// Quaternions
@@ -131,10 +133,10 @@
 
 
 				//LUCI
-				var lightPower = new THREE.Vector3(50.0, 50.0, 50.0);
-				var lightPowerRed = new THREE.Vector3(3500.0, 3500.0, 3500.0);
-				var lightPowerGreen = new THREE.Vector3(3500.0, 3500.0, 3500.0);
-				var pointLightPower = new THREE.Vector3(1500.0, 1500.0, 1500.0);
+				var lightPower = new THREE.Vector3(25.0, 25.0, 25.0);
+				var lightPowerRed = new THREE.Vector3(2000.0, 2000.0, 2000.0);
+				var lightPowerGreen = new THREE.Vector3(2000.0, 2000.0, 2000.0);
+				var pointLightPower = new THREE.Vector3(700.0, 700.0, 700.0);
 
 				var redLight = new THREE.Vector3(1.0, 0.0, 0.0);
 				var greenLight = new THREE.Vector3(0.0, 1.0, 0.0);
@@ -214,7 +216,10 @@
 					hitted = false;					// mostro colpito
 					slained = false;				// protagonista morto
 					trigger = true;					// animazioni mostro
+					enableWriting = true;			// screen info
+					missed = false;
 					
+					var ambiente = new THREE.Vector3( 0.3,0.3,0.3 )
 
 
 
@@ -314,7 +319,7 @@
 						lightPower:	{ type: "v3", value: lightPower },
 						lightPower2:	{ type: "v3", value: lightPowerRed },
 						lightPower3:	{ type: "v3", value: NO_POWER },
-						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						ambient:	{ type: "v3", value: ambiente },
 
 						normalMap: {type: "t", value: normal_grass },
 						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
@@ -339,9 +344,9 @@
 						scene.add(cubo);
 					}
 
-					var diffuse_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_diffuse.png" );
-					var normal_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_normal.png" );
-					var displacement_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_displ.png" );
+					var diffuse_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_diffuse.jpg" );
+					var normal_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_normal.jpg" );
+					var displacement_floor = THREE.ImageUtils.loadTexture( "assets/textures/floor_displ.jpg" );
 
 					uniforms_brick = {
 						diffuseMap: {type: "t", value: diffuse_floor},
@@ -358,7 +363,7 @@
 						displacementMap: {type: "v2", value: displacement_floor},
 						displacementScale: {type: "f", value: 0.1},
 						times: {type: "f", value: 1.0},
-						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						ambient:	{ type: "v3", value: ambiente },
 						
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
@@ -415,7 +420,7 @@
 						lightPower3:	{ type: "v3", value: NO_POWER },
 						normalMap: {type: "t", value: normal_grass },
 						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
-						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						ambient:	{ type: "v3", value: ambiente },
 						
 						lightColor2: {type: "v3", value: redLight},
 						times: {type: "f", value: 120.0},
@@ -500,7 +505,7 @@
 						normalMap: { type: "t", value: norm_bow },
 						normalScale: { type: "v2", value: new THREE.Vector2(1,1) },
 						//esperimento aggiungendo colore alle luci
-						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						ambient:	{ type: "v3", value: ambiente },
 						
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
@@ -556,7 +561,7 @@
 					arrow_uniforms = {
 						specularMap: { type: "t", value: arrow_specular},
 						diffuseMap:	{ type: "t", value: arrow_diffuse},
-						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						ambient:	{ type: "v3", value: ambiente },
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
 						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
@@ -614,26 +619,30 @@
 					//LOADING CART MESH
 					var cart_diff = THREE.ImageUtils.loadTexture( "assets/textures/cart_diff.png" );
 					var cart_norm = THREE.ImageUtils.loadTexture( "assets/textures/cart_norm.png" );
+					var cart_spec = THREE.ImageUtils.loadTexture( "assets/textures/cart_spec.png" );
 					
 
 					uniforms_cart = {
-							diffuseMap: {type: "t", value: cart_diff},
-							normalMap: {type: "t", value: cart_norm },
-							LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
-							LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
-							LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
-							LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
+						diffuseMap: {type: "t", value: cart_diff},
+						normalMap: {type: "t", value: cart_norm },
+						specularMap: { type: "t", value: cart_spec},
+						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
+						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
+						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
+						LightPosition4:	{ type: "v3", value: new THREE.Vector3(light4.position.x, light4.position.y, light4.position.z) }, 
 						lightPower4:	{ type: "v3", value: pointLightPower },
-							lightPower:	{ type: "v3", value: lightPower },
-							lightPower2:	{ type: "v3", value: lightPowerRed },
-							lightPower3:	{ type: "v3", value: NO_POWER },
-							normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
-							ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						lightPower:	{ type: "v3", value: lightPower },
+						lightPower2:	{ type: "v3", value: lightPowerRed },
+						lightPower3:	{ type: "v3", value: NO_POWER },
+						alpha: {type: "f", value: 0.95},
+						s: {type: "f", value: 0.05},
+						normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+						ambient:	{ type: "v3", value: ambiente },
 					};
 
 
 
-					var cart_mat = generateMaterialL(uniforms_cart, cart_diff, cart_norm);
+					var cart_mat = generateMaterialMF(uniforms_cart, cart_diff, cart_spec, cart_norm);
 					
 					loader.load( 'assets/models/Cart.obj', function ( object ) {
 
@@ -659,7 +668,7 @@
 					lamp_uniforms = {
 						specularMap: 	{ type: "t", value: lamp_specular}, 
 						diffuseMap:		{ type: "t", value: lamp_diffuse},
-						ambient:		{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						ambient:		{ type: "v3", value: ambiente },
 						m: 				{type: "f", value: 0},
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
@@ -716,7 +725,7 @@
 						lightPower3:	{ type: "v3", value: NO_POWER },
 						normalMap: 		{ type: "t", value: null },
 						normalScale: 	{ type: "v2", value: new THREE.Vector2(1,1) },
-						ambient:	{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },						
+						ambient:	{ type: "v3", value: ambiente },						
 						lightColor2: {type: "v3", value: redLight},
 						lightColor3: {type: "v3", value: greenLight},
 					};
@@ -744,7 +753,7 @@
 					column_uniforms = {
 						specularMap: 	{ type: "t", value: column_spec}, 
 						diffuseMap:		{ type: "t", value: column_diff},
-						ambient:		{ type: "v3", value: new THREE.Vector3( 0.1,0.1,0.1 ) },
+						ambient:		{ type: "v3", value: ambiente },
 						LightPosition:	{ type: "v3", value: new THREE.Vector3(light.position.x, light.position.y, light.position.z) },
 						LightPosition2:	{ type: "v3", value: new THREE.Vector3(light2.position.x, light2.position.y, light2.position.z) },
 						LightPosition3:	{ type: "v3", value: new THREE.Vector3(light3.position.x, light3.position.y, light3.position.z) }, 
@@ -762,7 +771,7 @@
 					};
 
 					// create columns
-					loadColumns(loader, column_uniforms, column_diff, column_spec, column_norm);
+					loadColumns(loader, column_uniforms, column_diff, column_norm);
 					var monst_material = generateMaterialL( monst_uniforms, monst_diff, monst_norm);
 
 					loader.load( 'assets/models/Monster.obj', function ( object ) {
@@ -778,6 +787,18 @@
 
 					// END TROPHY
 
+					// SOUNDS
+					killSound = new THREE.PositionalAudio( listener );
+					killSound.load( 'assets/sounds/archer_scream.wav' );
+					killSound.setRefDistance( 15 );
+	
+					monsterKillSound = new THREE.PositionalAudio( listener );
+					monsterKillSound.load( 'assets/sounds/monster_scream.wav' );
+					monsterKillSound.setRefDistance( 18 );
+
+					failSound = new THREE.PositionalAudio( listener );
+					failSound.load( 'assets/sounds/fail_sound.wav' );
+					failSound.setRefDistance( 18 );
 
 					
 					// Postprocessing greyscale on missed target
@@ -881,7 +902,7 @@
 					// RENDERIZZA IL GIOCO
 					else {
 
-						if(target && monster_death && monster_attack && !hitted && target.position.x > 1){
+						if(target && monster_death && monster_attack && !hitted && target.position.x > 1 && !missed){
 							target.position.x = target.position.x - 0.08;
 							monster_death.position.x = target.position.x;
 							monster_attack.position.x = target.position.x;
@@ -964,6 +985,7 @@
 								bow_uniforms.lightPower3.value = lightPowerGreen;
 								uniforms_cart.lightPower3.value = lightPowerGreen;
 								lamp_uniforms.lightPower3.value = lightPowerGreen;
+								column_uniforms.lightPower3.value = lightPowerGreen;
 
 								uniforms_normal.lightPower2.value = NO_POWER;
 								uniforms_brick.lightPower2.value = NO_POWER;
@@ -972,6 +994,7 @@
 								bow_uniforms.lightPower2.value = NO_POWER;
 								uniforms_cart.lightPower2.value = NO_POWER;
 								lamp_uniforms.lightPower2.value = NO_POWER;
+								column_uniforms.lightPower2.value = NO_POWER;
 
 								light2.visible = false;
 								light3.visible = true;
@@ -985,6 +1008,7 @@
 								bow_uniforms.lightPower2.value = lightPowerRed;
 								uniforms_cart.lightPower2.value = lightPowerRed;
 								lamp_uniforms.lightPower2.value = lightPowerRed;
+								column_uniforms.lightPower2.value = lightPowerRed;
 
 								uniforms_normal.lightPower3.value = NO_POWER;
 								uniforms_brick.lightPower3.value = NO_POWER;
@@ -993,6 +1017,7 @@
 								bow_uniforms.lightPower3.value = NO_POWER;
 								uniforms_cart.lightPower3.value = NO_POWER;
 								lamp_uniforms.lightPower3.value = NO_POWER;
+								column_uniforms.lightPower3.value = NO_POWER;
 
 								light2.visible = true;
 								light3.visible = false;
@@ -1031,9 +1056,8 @@
 							if(killCam.enabled) {
 
 								if(!playSound) {
-									killSound = new THREE.Audio( listener );
-									killSound.load( 'assets/sounds/monster_scream.wav' );
-									killSound.setRefDistance( 18 );
+									monster_death.add(monsterKillSound);
+									monsterKillSound.play();
 									playSound = true;
 								}
 
@@ -1056,24 +1080,26 @@
 								arrowContainer.remove(mainCamera);
 								mainCamera.position.set(arrowContainer.position.x, 5, 5);
 								mainCamera.lookAt(monster_death.position);
-												if(killCam.uniforms.amount.value < 1.0 ){
-													killCam.uniforms.amount.value += 0.01;
-												} else {
-													if(killCam.uniforms.index.value < 1.0 ){
-														killCam.uniforms.index.value += 0.01;
-													} else {
-														color += 0.01;
-														killCam.uniforms.color.value.y=0.0;
-														killCam.uniforms.color.value.z=0.0;
-														killCam.uniforms.color.value.x = Math.abs( Math.sin(color) )+ 0.35;
-														if(killCam.uniforms.color.value.x > 0.7){
-															killCam.uniforms.color.value.x = 0.7; //ecco
-														}
-													}
-												}
+								
+								if(killCam.uniforms.amount.value < 1.0 ){
+									killCam.uniforms.amount.value += 0.01;
+								} else {
+									if(killCam.uniforms.index.value < 1.0 ){
+										killCam.uniforms.index.value += 0.01;
+									} else {
+										color += 0.01;
+										killCam.uniforms.color.value.y=0.0;
+										killCam.uniforms.color.value.z=0.0;
+										killCam.uniforms.color.value.x = Math.abs( Math.sin(color) )+ 0.35;
+										if(killCam.uniforms.color.value.x > 0.7){
+											killCam.uniforms.color.value.x = 0.7; //ecco
+										}
+									}
+								}
 
-											}
-											killCam.uniforms.time.value = (killCam.uniforms.time.value + 0.2) % 10;
+							}
+
+							killCam.uniforms.time.value = (killCam.uniforms.time.value + 0.2) % 10;
 							composer.render();
 
 						} else {
@@ -1102,6 +1128,22 @@
 							arrowLoader = false;		
 						}
 
+						if(killCam.enabled && slained) {
+								
+							//arrowContainer.remove(mainCamera);
+							//mainCamera.position.set(arrowContainer.position.x, 5, 5);
+							//mainCamera.lookAt(monster_death.position);
+							
+							if(killCam.uniforms.amount.value < 1.0 ){
+								killCam.uniforms.amount.value += 0.01;
+							} 
+							
+							killCam.uniforms.color.value = new THREE.Vector3(0.0, 0.0, 0.0);
+							//killCam.uniforms.time.value = (killCam.uniforms.time.value + 0.2) % 10;
+							//composer.render();
+						}
+							
+
 						if(target && target.position.x < 5.05 && !slained) {   
 
 							target.visible = false;
@@ -1110,20 +1152,27 @@
 							if(attackAnimation && trigger) {					
 								monster_attack.rotation.y = Math.PI;
 								attackAnimation.play();	
+
 								trigger = false;
 							}
 
 							if(!playSound) {
-									killSound = new THREE.Audio( listener );
-									killSound.load( 'assets/sounds/archer_scream.wav' );
-									killSound.setRefDistance( 15 );
+									killSound.play();
 									playSound = true;
 							}
 
+
+
 							
-							document.getElementById("scores").innerHTML += "<br>You have been slained!";
-							document.getElementById("scores").innerHTML += "<br>GAME OVER";
-							document.getElementById("scores").innerHTML += "<br>Refresh the page to play more";
+
+							if(enableWriting) {
+								document.getElementById("scores").style.color = "red";
+								document.getElementById("scores").innerHTML += "<br>You have been slained!";
+								document.getElementById("scores").innerHTML += "<br>GAME OVER";
+								document.getElementById("scores").innerHTML += "<br>Refresh the page to play more";
+								enableWriting = false;
+							}
+
 							resetter = false;
 							slained = true;
 
@@ -1159,19 +1208,38 @@
 										arrowCamera.position.set(cx, cy, arrowContainer.position.z);							
 									}
 
-									if(y<=0){
-									   	document.getElementById("scores").innerHTML += "<br>Missed Target";
-									   	document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
+									if(y<=0) {
+
+										missed = true;
+										arrowContainer.add(failSound);
+										failSound.play();
+
+										if(enableWriting) {
+										   	document.getElementById("scores").innerHTML += "<br>Missed Target";
+										   	document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
+										   	enableWriting = false;
+										}
+
 									   	resetter = true;
+
 									}
 
 									   
 
-									if(arrowContainer.position.x >= 150){
-									   	hitted = true;
+									if(arrowContainer.position.x >= 150) {
 
-									   	document.getElementById("scores").innerHTML += "<br>Too far away!!";
-									   	document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
+									   	missed = true;
+									    arrowContainer.remove(mainCamera);
+
+									   	arrowContainer.add(failSound);
+										failSound.play();
+
+										if(enableWriting) {
+										   	document.getElementById("scores").innerHTML += "<br>Arrow went too far away!!";
+										   	document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
+										   	enableWriting = false;
+										}
+
 									   	resetter = true;
 									}
 
@@ -1206,9 +1274,12 @@
 									else
 										scoredPoints += Math.floor(100 - 70 * Math.abs(1.15 - y));
 									
-									document.getElementById("scores").innerHTML = "score: " + scoredPoints.toString(); //+ scoredPoints
-									document.getElementById("scores").innerHTML += "<br>Good Job!";
-									document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
+									if(enableWriting) {
+										document.getElementById("scores").innerHTML = "score: " + scoredPoints.toString(); //+ scoredPoints
+										document.getElementById("scores").innerHTML += "<br>Good Job!";
+										document.getElementById("scores").innerHTML += "<br>Press E to shoot more";
+										enableWriting = false;
+									}
 									resetter = true;
 
 								}
